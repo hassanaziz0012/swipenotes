@@ -1,6 +1,6 @@
 # Swipe Notes - Build Tasks
 
-- [ ] Set up Expo project with TypeScript - Initialize new Expo project, configure TypeScript, install core dependencies (React Native, React Navigation, etc.)
+- [x] Set up Expo project with TypeScript - Initialize new Expo project, configure TypeScript, install core dependencies (React Native, React Navigation, etc.)
 - [ ] Configure SQLite database - Set up expo-sqlite, create database initialization function, define table creation scripts
 - [ ] Implement database schema - Create all tables (Users, Projects, Cards, SourceNotes, Tags, Sessions, Statistics, LocalImages) with proper indexes
 - [ ] Build basic navigation structure - Set up React Navigation with Stack Navigator, create placeholder screens (Swipe, Import, History, Stats, Settings)
