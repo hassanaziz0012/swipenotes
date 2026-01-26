@@ -1,5 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
+import { StudyButton } from '../../components/StudyButton';
 import { FontFamily, Typography } from '../../constants/styles';
 
 export default function TabLayout() {
@@ -34,6 +35,17 @@ export default function TabLayout() {
                 options={{
                     title: 'Add',
                     tabBarIcon: ({ color }) => <Ionicons size={24} name="add-circle" color={color} />,
+                }}
+            />
+            <Tabs.Screen
+                name="review"
+                options={{
+                    title: '',
+                    tabBarButton: (props) => (
+                        <StudyButton 
+                            onPress={props.onPress as () => void} 
+                        />
+                    ),
                 }}
             />
             <Tabs.Screen
