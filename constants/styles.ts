@@ -15,6 +15,17 @@ export const Colors = {
     dark5: 'hsl(10, 75%, 28%)',
     dark6: 'hsl(9, 80%, 20%)',
   },
+  background: {
+      base: '#F9FAFB', // cool gray 50
+      card: '#FFFFFF',
+  },
+  text: {
+      base: '#111827', // cool gray 900
+      subtle: '#6B7280', // cool gray 500
+  },
+  border: {
+      subtle: '#E5E7EB', // cool gray 200
+  }
 } as const;
 
 export const FontFamily = {
@@ -74,6 +85,15 @@ export const Typography = {
   '9xl': {
     fontSize: 128,
     lineHeight: 128,
+  },
+  // Aliases
+  body: {
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  caption: {
+    fontSize: 12,
+    lineHeight: 16,
   },
 } as const;
 
