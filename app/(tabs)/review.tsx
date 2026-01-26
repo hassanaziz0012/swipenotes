@@ -1,23 +1,128 @@
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import SwipeCard from '../../components/SwipeCard';
 import { Colors, Typography } from '../../constants/styles';
+import { useAuth } from '../../context/AuthContext';
+import { retrieve_eligible_cards } from '../../utils/swipeSession';
 
 export default function ReviewScreen() {
+    const { user } = useAuth();
+    const [cards, setCards] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchCards = async () => {
+            if (user) {
+                try {
+                    const fetchedCards = await retrieve_eligible_cards(user.id);
+                    setCards(fetchedCards);
+                } catch (error) {
+                    console.error("Failed to fetch cards:", error);
+                } finally {
+                    setLoading(false);
+                }
+            }
+        };
+
+        fetchCards();
+    }, [user]);
+
+    const handleSwipeLeft = (cardId: number) => {
+        // Remove card from stack
+        setCards((prevCards) => prevCards.filter((card) => card.id !== cardId));
+        // TODO: Update stats for card (left swipe - forgotten/hard)
+        console.log(`Swiped left on card ${cardId}`);
+    };
+
+    const handleSwipeRight = (cardId: number) => {
+        // Remove card from stack
+        setCards((prevCards) => prevCards.filter((card) => card.id !== cardId));
+        // TODO: Update stats for card (right swipe - remembered/easy)
+        console.log(`Swiped right on card ${cardId}`);
+    };
+
+    if (loading) {
+        return (
+            <View style={styles.centerContainer}>
+                <ActivityIndicator size="large" color={Colors.primary.base} />
+            </View>
+        );
+    }
+
+    if (cards.length === 0) {
+        return (
+            <View style={styles.centerContainer}>
+                <Text style={styles.emptyText}>No cards for review right now!</Text>
+                <Text style={styles.subText}>Great job keeping up.</Text>
+            </View>
+        );
+    }
+
     return (
-        <View style={styles.container}>
-            <Text style={styles.title}>Review Session</Text>
-        </View>
+        <GestureHandlerRootView style={styles.container}>
+            <Text style={styles.header}>Review Session</Text>
+            <View style={styles.cardStack}>
+                {cards.map((card, index) => {
+                    // Only render the top 3 cards for performance, but need to keep others in state
+                    if (index > 2) return null;
+                    return (
+                        <SwipeCard
+                            key={card.id}
+                            card={card}
+                            index={index}
+                            onSwipeLeft={() => handleSwipeLeft(card.id)}
+                            onSwipeRight={() => handleSwipeRight(card.id)}
+                        />
+                    );
+                }).reverse()} 
+            </View>
+             <View style={styles.footer}>
+                <Text style={styles.counter}>{cards.length} cards remaining</Text>
+            </View>
+        </GestureHandlerRootView>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: Colors.background.base,
+        paddingTop: 60,
+    },
+    centerContainer: {
+        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#fff',
+        backgroundColor: Colors.background.base,
     },
-    title: {
+    header: {
         ...Typography['2xl'],
-        color: Colors.primary.base,
+        color: Colors.text.base,
+        textAlign: 'center',
+        marginBottom: 20,
     },
+    cardStack: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+    },
+    emptyText: {
+        ...Typography.xl,
+        color: Colors.text.base,
+        marginBottom: 8,
+    },
+    subText: {
+        ...Typography.body,
+        color: Colors.text.subtle,
+    },
+    footer: {
+        padding: 20,
+        alignItems: 'center',
+    },
+    counter: {
+        ...Typography.caption,
+        color: Colors.text.subtle,
+    }
 });
