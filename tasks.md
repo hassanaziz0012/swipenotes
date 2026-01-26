@@ -6,7 +6,7 @@
 - [ ] Build basic navigation structure - Set up React Navigation with Stack Navigator, create placeholder screens (Swipe, Import, History, Stats, Settings)
 - [ ] Create Card data models and types - Define TypeScript interfaces for all database entities, create helper functions for type safety
 - [ ] Build basic Card component - Create card UI component with container styling, placeholder for content, and basic layout
-- [ ] Integrate markdown rendering - Add react-native-markdown-display, configure markdown renderer with styling, test with sample content
+- [x] Integrate markdown rendering - Add react-native-markdown-display, configure markdown renderer with styling, test with sample content
 - [ ] Implement gesture handler for swiping - Set up react-native-gesture-handler and reanimated, create swipe detection (left/right), add visual feedback for swipe direction
 - [ ] Build SwipeCard component - Combine Card component with gesture handler, add swipe animations, implement swipe completion callbacks
 - [ ] Create session management service - Build SessionManager class with start, end, record swipe, and undo functions
@@ -16,7 +16,7 @@
 - [ ] Build SwipeScreen UI - Create main swipe interface with card, session counter, history button, and swipe instructions
 - [ ] Implement undo functionality - Create HistoryScreen with list of swiped cards in current session, add undo button that reverts last swipe
 - [ ] Add demo cards for onboarding - Create demo card data, implement first-launch detection, show demo cards on first use
-- [ ] Build file picker integration - Set up expo-document-picker, create function to select markdown files, handle file permissions
+- [x] Build file picker integration - Set up expo-document-picker, create function to select markdown files, handle file permissions
 - [ ] Implement markdown parsing - Create markdown parser to extract content, identify structure (headers, paragraphs), count words
 - [ ] Build chunking algorithm - Implement splitByHeaders function, implement combineIntoParagraphCards function, handle edge cases (single paragraph, too long)
 - [ ] Create content hash for duplicate detection - Generate hash from markdown content, check against existing SourceNotes before import
