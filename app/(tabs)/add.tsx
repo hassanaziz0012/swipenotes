@@ -1,9 +1,10 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { Button } from '../../components/Button';
-import { FontFamily, Spacing, Typography } from '../../constants/styles';
+import { SourceNoteList } from '../../components/SourceNoteList';
+import { Spacing } from '../../constants/styles';
 
 export default function AddScreen() {
   const router = useRouter();
@@ -46,7 +47,7 @@ export default function AddScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.buttonContainer}>
         <Button 
           title="Extract with AI" 
@@ -61,34 +62,22 @@ export default function AddScreen() {
           style={styles.button}
         />
       </View>
-    </View>
+
+      <SourceNoteList />
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    alignItems: 'center',
+    flexGrow: 1,
     backgroundColor: '#fff',
     padding: Spacing['6'],
   },
-  title: {
-    fontSize: Typography['2xl'].fontSize, // Increased size slightly
-    fontFamily: FontFamily.bold, // Use global font family
-    marginBottom: Spacing['2'],
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: Typography.base.fontSize,
-    fontFamily: FontFamily.regular,
-    color: '#666',
-    marginBottom: Spacing['8'],
-    textAlign: 'center',
-  },
   buttonContainer: {
     width: '100%',
-    maxWidth: 400,
     gap: Spacing['4'],
+    marginBottom: Spacing['8'],
   },
   button: {
     width: '100%',
