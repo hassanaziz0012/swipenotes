@@ -1,16 +1,17 @@
 import React from 'react';
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Dimensions, StyleSheet, View } from 'react-native';
+import { Gesture, GestureDetector, ScrollView } from 'react-native-gesture-handler';
+import Markdown from 'react-native-markdown-display';
 import Animated, {
-    Extrapolation,
-    interpolate,
-    useAnimatedStyle,
-    useSharedValue,
-    withSpring,
-    withTiming
+  Extrapolation,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
-import { Colors, Typography } from '../constants/styles';
+import { Colors, FontFamily, Spacing, Typography } from '../constants/styles';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.3;
@@ -35,6 +36,7 @@ export default function SwipeCard({ card, onSwipeLeft, onSwipeRight, index }: Sw
   const rotation = useSharedValue(0);
 
   const gesture = Gesture.Pan()
+    .activeOffsetX([-10, 10])
     .onBegin(() => {
      
     })
@@ -57,7 +59,7 @@ export default function SwipeCard({ card, onSwipeLeft, onSwipeRight, index }: Sw
         } else if (event.translationX < -SWIPE_THRESHOLD) {
              // Swipe Left
             translationX.value = withTiming(-SCREEN_WIDTH * 1.5, {}, () => {
-                 scheduleOnRN(onSwipeLeft);
+                scheduleOnRN(onSwipeLeft);
             });
         } else {
             // Spring back
@@ -77,20 +79,33 @@ export default function SwipeCard({ card, onSwipeLeft, onSwipeRight, index }: Sw
     };
   });
 
-  // Only enable gestures for the top card (index 0)
-//   const composedGesture = Gesture.Exclusive(gesture);
-
   return (
     <View style={[styles.container, { zIndex: -index }]} pointerEvents="box-none">
         {index === 0 ? (
             <GestureDetector gesture={gesture}>
                 <Animated.View style={[styles.card, animatedStyle]}>
-                    <Text style={styles.text}>{card.content}</Text>
+                    <ScrollView
+                        style={styles.scrollView}
+                        contentContainerStyle={styles.scrollContent}
+                        showsVerticalScrollIndicator={true}
+                    >
+                        <Markdown style={markdownStyles}>
+                            {card.content}
+                        </Markdown>
+                    </ScrollView>
                 </Animated.View>
             </GestureDetector>
         ) : (
              <View style={[styles.card, { transform: [{ scale: 1 - index * 0.05 }, { translateY: index * 10 }] }]}>
-                <Text style={styles.text}>{card.content}</Text>
+                <ScrollView
+                    style={styles.scrollView}
+                    contentContainerStyle={styles.scrollContent}
+                    scrollEnabled={false}
+                >
+                    <Markdown style={markdownStyles}>
+                         {card.content}
+                    </Markdown>
+                </ScrollView>
              </View>
         )}
     </View>
@@ -108,7 +123,7 @@ const styles = StyleSheet.create({
     height: SCREEN_WIDTH * 1.2,
     backgroundColor: Colors.background.card,
     borderRadius: 16,
-    padding: 24,
+    overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: "#000",
@@ -122,9 +137,35 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border.subtle,
   },
-  text: {
-    ...Typography.body,
-    fontSize: 20,
-    textAlign: 'center',
+  scrollView: {
+    width: '100%',
+    height: '100%',
   },
+  scrollContent: {
+    padding: 24,
+    flexGrow: 1,
+    justifyContent: 'center', 
+  },
+  // text style is no longer needed for the main content but keeping it just in case or we can remove it.
+  // I will rely on markdownStyles.
 });
+
+const markdownStyles = {
+  body: {
+    ...Typography.base,
+    color: Colors.text.base,
+    fontFamily: FontFamily.regular,
+  },
+  heading1: {
+    ...Typography.xl,
+    color: Colors.text.base,
+    marginBottom: Spacing['2.5'],
+    fontFamily: FontFamily.bold,
+  },
+  heading2: { 
+    ...Typography.lg,
+    color: Colors.text.base,
+    marginBottom: Spacing['2.5'],
+    fontFamily: FontFamily.bold,
+  },
+};
