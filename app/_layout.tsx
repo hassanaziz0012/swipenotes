@@ -3,6 +3,7 @@ import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { db } from '../db/client';
 import migrations from '../drizzle/migrations';
@@ -45,10 +46,12 @@ function RootLayoutNav() {
   if (!migrationSuccess && !migrationError) return null;
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-       <Stack.Screen name="(tabs)" />
-       <Stack.Screen name="(auth)" />
-    </Stack>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <Stack screenOptions={{ headerShown: false }}>
+         <Stack.Screen name="(tabs)" />
+         <Stack.Screen name="(auth)" />
+      </Stack>
+    </GestureHandlerRootView>
   );
 }
 
