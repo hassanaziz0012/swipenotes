@@ -16,5 +16,5 @@ export const cards = sqliteTable('cards', {
     timesRightSwiped: integer('times_right_swiped').notNull(),
     inReviewQueue: integer('in_review_queue', { mode: 'boolean' }).notNull(),
     wordCount: integer('word_count').notNull(),
-    extractionMethod: text('extraction_method', { enum: ['chunk_paragraph', 'ai', 'full'] }).notNull(),
+    extractionMethod: text('extraction_method', { enum: ['chunk_paragraph', 'chunk_header', 'ai', 'full'] }).notNull(),
 });
