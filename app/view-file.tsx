@@ -1,9 +1,10 @@
 import { File as ExpoFile } from 'expo-file-system';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Markdown from 'react-native-markdown-display';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Button } from '../components/Button';
 import { Colors, FontFamily, Spacing, Typography } from '../constants/styles';
 import { useAuth } from '../context/AuthContext';
 import { cards } from '../db/models/card';
@@ -11,6 +12,7 @@ import { processTextExtraction } from '../utils/extraction';
 
 export default function ViewFileScreen() {
   const { uri, name } = useLocalSearchParams<{ uri: string; name: string }>();
+  const router = useRouter();
   const [content, setContent] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,53 +67,58 @@ export default function ViewFileScreen() {
           <Text style={styles.errorText}>{error}</Text>
         </View>
       ) : (
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContainer}>
-          {/* Raw Content */}
-          <Text style={styles.sectionHeader}>Raw Content</Text>
-          <View style={[styles.markdownBox, { height: 350 }]}>
-            <ScrollView
-              style={styles.scrollView}
-              contentContainerStyle={styles.scrollContent}
-              indicatorStyle="black"
-              nestedScrollEnabled={true}
-            >
-              <Markdown style={markdownStyles}>
-                {content}
-              </Markdown>
-            </ScrollView>
+        <>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContainer}>
+            {/* Raw Content */}
+            <Text style={styles.sectionHeader}>Raw Content</Text>
+            <View style={[styles.markdownBox, { height: 350 }]}>
+              <ScrollView
+                style={styles.scrollView}
+                contentContainerStyle={styles.scrollContent}
+                indicatorStyle="black"
+                nestedScrollEnabled={true}
+              >
+                <Markdown style={markdownStyles}>
+                  {content}
+                </Markdown>
+              </ScrollView>
+            </View>
+
+            <View style={styles.metaContainer}>
+              <Text style={styles.metaText} numberOfLines={1}>
+                {name}
+              </Text>
+              <Text style={styles.metaSubText}>
+                {fileSize}
+              </Text>
+            </View>
+
+            {/* Cards Section */}
+            {extractedCards.length > 0 && (
+              <>
+                <Text style={styles.sectionHeader}>Extracted Cards ({extractedCards.length})</Text>
+                {extractedCards.map((card, index) => (
+                  <View key={card.id || index} style={[styles.markdownBox, { height: 300, marginBottom: Spacing['4'] }]}>
+                    <ScrollView
+                      style={styles.scrollView}
+                      contentContainerStyle={styles.scrollContent}
+                      indicatorStyle="black"
+                      nestedScrollEnabled={true}
+                    >
+                      <Markdown style={markdownStyles}>
+                        {card.content}
+                      </Markdown>
+                    </ScrollView>
+                  </View>
+                ))}
+              </>
+            )}
+
+          </ScrollView>
+          <View style={styles.footer}>
+            <Button title="Confirm and Go Back" onPress={() => router.back()} />
           </View>
-
-          <View style={styles.metaContainer}>
-            <Text style={styles.metaText} numberOfLines={1}>
-              {name}
-            </Text>
-            <Text style={styles.metaSubText}>
-              {fileSize}
-            </Text>
-          </View>
-
-          {/* Cards Section */}
-          {extractedCards.length > 0 && (
-            <>
-              <Text style={styles.sectionHeader}>Extracted Cards ({extractedCards.length})</Text>
-              {extractedCards.map((card, index) => (
-                <View key={card.id || index} style={[styles.markdownBox, { height: 300, marginBottom: Spacing['4'] }]}>
-                  <ScrollView
-                    style={styles.scrollView}
-                    contentContainerStyle={styles.scrollContent}
-                    indicatorStyle="black"
-                    nestedScrollEnabled={true}
-                  >
-                    <Markdown style={markdownStyles}>
-                      {card.content}
-                    </Markdown>
-                  </ScrollView>
-                </View>
-              ))}
-            </>
-          )}
-
-        </ScrollView>
+        </>
       )}
     </SafeAreaView>
   );
@@ -180,6 +187,12 @@ const styles = StyleSheet.create({
     fontSize: Typography.lg.fontSize,
     color: Colors.primary.dark2,
     marginTop: Spacing['2'],
+  },
+  footer: {
+    padding: Spacing['4'],
+    borderTopWidth: 1,
+    borderTopColor: Colors.border.subtle,
+    backgroundColor: '#fff',
   },
 });
 
