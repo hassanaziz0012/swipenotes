@@ -17,4 +17,5 @@ export const cards = sqliteTable('cards', {
     inReviewQueue: integer('in_review_queue', { mode: 'boolean' }).notNull(),
     wordCount: integer('word_count').notNull(),
     extractionMethod: text('extraction_method', { enum: ['chunk_paragraph', 'chunk_header', 'ai', 'full'] }).notNull(),
+    tags: text('tags', { mode: 'json' }).$type<string[]>().default([]).notNull(),
 });

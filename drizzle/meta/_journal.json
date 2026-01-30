@@ -22,6 +22,13 @@
       "when": 1769321527391,
       "tag": "0002_loud_dexter_bennett",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1769763815015,
+      "tag": "0003_dazzling_shatterstar",
+      "breakpoints": true
     }
   ]
 }
