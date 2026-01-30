@@ -1,10 +1,10 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../components/Button';
 import { SourceNoteList } from '../../components/SourceNoteList';
-import { Spacing } from '../../constants/styles';
+import { FontFamily, Spacing, Typography } from '../../constants/styles';
 
 export default function AddScreen() {
   const router = useRouter();
@@ -46,6 +46,10 @@ export default function AddScreen() {
     }
   };
 
+  const handleViewAllCards = () => {
+    router.push('/all-cards');
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.buttonContainer}>
@@ -64,6 +68,17 @@ export default function AddScreen() {
       </View>
 
       <SourceNoteList />
+
+      {/* Cards Section */}
+      <View style={styles.cardsSection}>
+        <Text style={styles.sectionTitle}>Cards</Text>
+        <Button
+          title="View All Cards"
+          variant="secondary"
+          onPress={handleViewAllCards}
+          style={styles.button}
+        />
+      </View>
     </ScrollView>
   );
 }
@@ -81,5 +96,15 @@ const styles = StyleSheet.create({
   },
   button: {
     width: '100%',
+  },
+  cardsSection: {
+    marginTop: Spacing['8'],
+    width: '100%',
+  },
+  sectionTitle: {
+    fontSize: Typography.lg.fontSize,
+    fontFamily: FontFamily.bold,
+    marginBottom: Spacing['4'],
+    color: '#333',
   },
 });
