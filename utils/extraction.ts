@@ -1,3 +1,4 @@
+import { and, eq } from 'drizzle-orm';
 import * as Crypto from 'expo-crypto';
 import { db } from '../db/client';
 import { cards } from '../db/models/card';
@@ -10,6 +11,18 @@ export const processTextExtraction = async (text: string, userId: number, fileNa
             Crypto.CryptoDigestAlgorithm.SHA256,
             text
         );
+
+        // Check if source note already exists
+        const existingNote = await db.select().from(sourceNotes).where(
+            and(
+                eq(sourceNotes.contentHash, contentHash),
+                eq(sourceNotes.userId, userId)
+            )
+        );
+
+        if (existingNote.length > 0) {
+            throw new Error("This source note has already been added.");
+        }
 
         // 2. Create SourceNote
         const result = await db.insert(sourceNotes).values({
@@ -136,3 +149,27 @@ const createCard = async (userId: number, sourceNoteId: number, content: string,
         extractionMethod,
     }).returning();
 };
+
+const aiExtractionPrompt = (existingTags: string[], noteContent: string) => `Extract 3-7 key insights from this note as separate cards.
+
+Requirements:
+- Each card: 50-200 words
+- Self-contained and understandable alone
+- Preserve important details, quotes, data
+- Keep markdown formatting
+- Suggest relevant tags from existing list when applicable
+
+Existing tags: ${existingTags.join(', ')}
+
+Note content:
+${noteContent}
+
+Return JSON:
+{
+  "cards": [
+    {
+      "content": "card content in markdown",
+      "suggested_tags": ["tag1", "tag2"]
+    }
+  ]
+}`
