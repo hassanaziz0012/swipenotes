@@ -2,9 +2,10 @@ import { File as ExpoFile } from 'expo-file-system';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Markdown from 'react-native-markdown-display';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../components/Button';
+import { TextMarkdownDisplay } from '../components/TextMarkdownDisplay';
+import { Toast } from '../components/Toast';
 import { Colors, FontFamily, Spacing, Typography } from '../constants/styles';
 import { useAuth } from '../context/AuthContext';
 import { cards } from '../db/models/card';
@@ -15,15 +16,20 @@ export default function ViewFileScreen() {
   const router = useRouter();
   const [content, setContent] = useState<string>('');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [fileSize, setFileSize] = useState<string>('');
   const [extractedCards, setExtractedCards] = useState<typeof cards.$inferSelect[]>([]);
+  
+  // Toast state
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+
   const { user, isLoading: authLoading } = useAuth();
 
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
-      setError('User not authenticated');
+      setToastMessage('User not authenticated');
+      setToastVisible(true);
       setLoading(false);
       return;
     }
@@ -41,8 +47,8 @@ export default function ViewFileScreen() {
         setExtractedCards(results);
 
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to read file or extract cards');
-        console.error(err);
+        setToastMessage(err instanceof Error ? err.message : 'Failed to read file or extract cards');
+        setToastVisible(true);
       } finally {
         setLoading(false);
       }
@@ -62,10 +68,6 @@ export default function ViewFileScreen() {
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={Colors.primary.base} />
         </View>
-      ) : error ? (
-        <View style={styles.centerContainer}>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
       ) : (
         <>
           <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContainer}>
@@ -78,9 +80,9 @@ export default function ViewFileScreen() {
                 indicatorStyle="black"
                 nestedScrollEnabled={true}
               >
-                <Markdown style={markdownStyles}>
+                <TextMarkdownDisplay>
                   {content}
-                </Markdown>
+                </TextMarkdownDisplay>
               </ScrollView>
             </View>
 
@@ -105,9 +107,9 @@ export default function ViewFileScreen() {
                       indicatorStyle="black"
                       nestedScrollEnabled={true}
                     >
-                      <Markdown style={markdownStyles}>
+                      <TextMarkdownDisplay>
                         {card.content}
-                      </Markdown>
+                      </TextMarkdownDisplay>
                     </ScrollView>
                   </View>
                 ))}
@@ -120,6 +122,12 @@ export default function ViewFileScreen() {
           </View>
         </>
       )}
+      
+      <Toast 
+        visible={toastVisible} 
+        message={toastMessage} 
+        onDismiss={() => setToastVisible(false)} 
+      />
     </SafeAreaView>
   );
 }
@@ -195,35 +203,3 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
 });
-
-const markdownStyles = {
-  body: {
-    fontFamily: FontFamily.regular,
-    fontSize: Typography.base.fontSize,
-    color: '#333',
-  },
-  heading1: {
-    fontFamily: FontFamily.bold,
-    fontSize: Typography['3xl'].fontSize,
-    marginBottom: Spacing['2'],
-    color: '#000',
-  },
-  heading2: {
-    fontFamily: FontFamily.bold,
-    fontSize: Typography['2xl'].fontSize,
-    marginTop: Spacing['4'],
-    marginBottom: Spacing['2'],
-    color: '#000',
-  },
-  heading3: {
-    fontFamily: FontFamily.bold,
-    fontSize: Typography.xl.fontSize,
-    marginTop: Spacing['3'],
-    marginBottom: Spacing['1'],
-    color: '#000',
-  },
-  paragraph: {
-    marginBottom: Spacing['3'],
-    lineHeight: Typography.base.lineHeight,
-  },
-};

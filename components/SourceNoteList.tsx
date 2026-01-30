@@ -6,7 +6,10 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View 
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { FontFamily, Spacing, Typography } from '../constants/styles';
 import { db } from '../db/client';
-import { deleteSourceNote, sourceNotes } from '../db/models/sourcenote';
+import { sourceNotes } from '../db/models/sourcenote';
+import { deleteSourceNote } from '../db/services';
+
+import { TextMarkdownDisplay } from './TextMarkdownDisplay';
 
 function formatRelativeDate(date: Date) {
   const now = new Date();
@@ -110,8 +113,9 @@ export function SourceNoteList() {
         visible={!!selectedNote}
         onRequestClose={() => setSelectedNote(null)}
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setSelectedNote(null)}>
-          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+        <View style={styles.modalOverlay}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setSelectedNote(null)} />
+          <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle} numberOfLines={1}>
                 {selectedNote?.originalFileName}
@@ -121,10 +125,10 @@ export function SourceNoteList() {
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.modalBody}>
-              <Text style={styles.fileContent}>{selectedNote?.rawContent}</Text>
+              <TextMarkdownDisplay>{selectedNote?.rawContent || ''}</TextMarkdownDisplay>
             </ScrollView>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
     </View>
   );
@@ -226,10 +230,4 @@ const styles = StyleSheet.create({
   modalBody: {
     flex: 1,
   },
-  fileContent: {
-    fontFamily: 'monospace',
-    fontSize: Typography.sm.fontSize,
-    color: '#333',
-    lineHeight: 20,
-  }
 });

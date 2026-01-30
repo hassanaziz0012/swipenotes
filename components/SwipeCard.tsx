@@ -1,7 +1,6 @@
 import React from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector, ScrollView } from 'react-native-gesture-handler';
-import Markdown from 'react-native-markdown-display';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -11,7 +10,8 @@ import Animated, {
   withTiming
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
-import { Colors, FontFamily, Spacing, Typography } from '../constants/styles';
+import { Colors } from '../constants/styles';
+import { TextMarkdownDisplay } from './TextMarkdownDisplay';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.3;
@@ -89,9 +89,9 @@ export default function SwipeCard({ card, onSwipeLeft, onSwipeRight, index }: Sw
                         contentContainerStyle={styles.scrollContent}
                         showsVerticalScrollIndicator={true}
                     >
-                        <Markdown style={markdownStyles}>
+                        <TextMarkdownDisplay>
                             {card.content}
-                        </Markdown>
+                        </TextMarkdownDisplay>
                     </ScrollView>
                 </Animated.View>
             </GestureDetector>
@@ -102,9 +102,9 @@ export default function SwipeCard({ card, onSwipeLeft, onSwipeRight, index }: Sw
                     contentContainerStyle={styles.scrollContent}
                     scrollEnabled={false}
                 >
-                    <Markdown style={markdownStyles}>
+                    <TextMarkdownDisplay>
                          {card.content}
-                    </Markdown>
+                    </TextMarkdownDisplay>
                 </ScrollView>
              </View>
         )}
@@ -146,26 +146,4 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center', 
   },
-  // text style is no longer needed for the main content but keeping it just in case or we can remove it.
-  // I will rely on markdownStyles.
 });
-
-const markdownStyles = {
-  body: {
-    ...Typography.base,
-    color: Colors.text.base,
-    fontFamily: FontFamily.regular,
-  },
-  heading1: {
-    ...Typography.xl,
-    color: Colors.text.base,
-    marginBottom: Spacing['2.5'],
-    fontFamily: FontFamily.bold,
-  },
-  heading2: { 
-    ...Typography.lg,
-    color: Colors.text.base,
-    marginBottom: Spacing['2.5'],
-    fontFamily: FontFamily.bold,
-  },
-};
