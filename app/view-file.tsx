@@ -12,7 +12,7 @@ import { cards } from '../db/models/card';
 import { processTextExtraction } from '../utils/extraction';
 
 export default function ViewFileScreen() {
-  const { uri, name } = useLocalSearchParams<{ uri: string; name: string }>();
+  const { uri, name, extractionMethod } = useLocalSearchParams<{ uri: string; name: string; extractionMethod?: 'manual' | 'ai' }>();
   const router = useRouter();
   const [content, setContent] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -43,7 +43,7 @@ export default function ViewFileScreen() {
         setFileSize(formatSize(file.size));
 
         // Process extraction
-        const results = await processTextExtraction(fileContent, user.id, name);
+        const results = await processTextExtraction(fileContent, user.id, name, extractionMethod || 'manual');
         setExtractedCards(results);
 
       } catch (err) {
@@ -67,6 +67,9 @@ export default function ViewFileScreen() {
       {loading ? (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={Colors.primary.base} />
+          <Text style={styles.loadingText}>
+            Reading and processing document. This might take a while, please wait.
+          </Text>
         </View>
       ) : (
         <>
@@ -154,6 +157,15 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: Spacing['8'],
+  },
+  loadingText: {
+    marginTop: Spacing['4'],
+    textAlign: 'center',
+    fontSize: Typography.base.fontSize,
+    fontFamily: FontFamily.regular,
+    color: Colors.text.subtle,
+    lineHeight: Typography.base.lineHeight,
   },
   markdownBox: {
     height: '75%',

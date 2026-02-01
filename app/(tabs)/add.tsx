@@ -8,16 +8,11 @@ import { FontFamily, Spacing, Typography } from '../../constants/styles';
 
 export default function AddScreen() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const [isExtractingAI, setIsExtractingAI] = useState(false);
+  const [isExtractingManual, setIsExtractingManual] = useState(false);
 
-  const handleExtractWithAI = () => {
-    // Placeholder for AI extraction
-    console.log('Extract with AI pressed');
-  };
-
-  const handleExtractManually = async () => {
+  const pickDocument = async () => {
     try {
-      setLoading(true);
       const result = await DocumentPicker.getDocumentAsync({
         type: ['text/plain', 'text/markdown'],
         copyToCacheDirectory: true,
@@ -25,29 +20,54 @@ export default function AddScreen() {
 
       if (result.canceled) {
         console.log('Document picker canceled');
-        return;
+        return null;
       }
 
       console.log('Document selected:', result.assets[0]);
-      
-      if (result.assets && result.assets.length > 0) {
-        const file = result.assets[0];
+      return result.assets[0];
+    } catch (error) {
+      console.error('Error picking document:', error);
+      Alert.alert('Error', 'Failed to pick document');
+      return null;
+    }
+  };
+
+  const handleExtractWithAI = async () => {
+    setIsExtractingAI(true);
+    try {
+      const file = await pickDocument();
+      if (file) {
+        router.push({
+          pathname: '/view-file',
+          params: { uri: file.uri, name: file.name, extractionMethod: 'ai' }
+        });
+      }
+    } finally {
+      setIsExtractingAI(false);
+    }
+  };
+
+  const handleExtractManually = async () => {
+    setIsExtractingManual(true);
+    try {
+      const file = await pickDocument();
+      if (file) {
         router.push({
           pathname: '/view-file',
           params: { uri: file.uri, name: file.name }
         });
       }
-
-    } catch (error) {
-      console.error('Error picking document:', error);
-      Alert.alert('Error', 'Failed to pick document');
     } finally {
-      setLoading(false);
+      setIsExtractingManual(false);
     }
   };
 
   const handleViewAllCards = () => {
     router.push('/all-cards');
+  };
+
+  const handleViewReviewQueue = () => {
+    router.push('/review-queue');
   };
 
   return (
@@ -56,13 +76,14 @@ export default function AddScreen() {
         <Button 
           title="Extract with AI" 
           onPress={handleExtractWithAI}
+          loading={isExtractingAI}
           style={styles.button}
         />
         <Button 
           title="Extract Manually" 
           variant="secondary" 
           onPress={handleExtractManually}
-          loading={loading}
+          loading={isExtractingManual}
           style={styles.button}
         />
       </View>
@@ -76,6 +97,12 @@ export default function AddScreen() {
           title="View All Cards"
           variant="secondary"
           onPress={handleViewAllCards}
+          style={styles.button}
+        />
+        <Button
+          title="View Review Queue"
+          variant="secondary"
+          onPress={handleViewReviewQueue}
           style={styles.button}
         />
       </View>
@@ -100,6 +127,7 @@ const styles = StyleSheet.create({
   cardsSection: {
     marginTop: Spacing['8'],
     width: '100%',
+    gap: Spacing['4'],
   },
   sectionTitle: {
     fontSize: Typography.lg.fontSize,
