@@ -4,9 +4,10 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import SwipeCard from '../../components/SwipeCard';
 import { Colors, Typography } from '../../constants/styles';
 import { useAuth } from '../../context/AuthContext';
+import { setCardInReviewQueue } from '../../db/services';
 import { retrieve_eligible_cards } from '../../utils/swipeSession';
 
-export default function ReviewScreen() {
+export default function StudyScreen() {
     const { user } = useAuth();
     const [cards, setCards] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -35,11 +36,16 @@ export default function ReviewScreen() {
         console.log(`Swiped left on card ${cardId}`);
     };
 
-    const handleSwipeRight = (cardId: number) => {
+    const handleSwipeRight = async (cardId: number) => {
         // Remove card from stack
         setCards((prevCards) => prevCards.filter((card) => card.id !== cardId));
-        // TODO: Update stats for card (right swipe - remembered/easy)
-        console.log(`Swiped right on card ${cardId}`);
+        // Set the card's inReviewQueue property to true
+        try {
+            await setCardInReviewQueue(cardId, true);
+            console.log(`Swiped right on card ${cardId} - added to review queue`);
+        } catch (error) {
+            console.error(`Failed to add card ${cardId} to review queue:`, error);
+        }
     };
 
     if (loading) {
@@ -61,7 +67,7 @@ export default function ReviewScreen() {
 
     return (
         <GestureHandlerRootView style={styles.container}>
-            <Text style={styles.header}>Review Session</Text>
+            <Text style={styles.header}>Study Session</Text>
             <View style={styles.cardStack}>
                 {cards.map((card, index) => {
                     // Only render the top 3 cards for performance, but need to keep others in state

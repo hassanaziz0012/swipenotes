@@ -38,7 +38,7 @@ export default function TabLayout() {
                 }}
             />
             <Tabs.Screen
-                name="review"
+                name="study"
                 options={{
                     title: '',
                     tabBarButton: (props) => (
