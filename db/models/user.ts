@@ -10,3 +10,10 @@ export const users = sqliteTable('users', {
     notificationEnabled: integer('notification_enabled', { mode: 'boolean' }).default(false).notNull(),
     notificationTime: text('notification_time').default('09:00').notNull(),
 });
+
+export type UserSettings = {
+    dailyCardLimit?: number;
+    theme?: 'light' | 'dark' | 'auto';
+    notificationEnabled?: boolean;
+    notificationTime?: string;
+};

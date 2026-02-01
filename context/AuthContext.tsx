@@ -12,6 +12,7 @@ interface AuthContextType {
   signIn: (email: string, pass: string) => Promise<void>;
   signUp: (name: string, email: string, pass: string) => Promise<void>;
   signOut: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -93,8 +94,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await SecureStore.deleteItemAsync('user_id');
   };
 
+  const refreshUser = async () => {
+    if (user) {
+      const userRecord = await db.select().from(users).where(eq(users.id, user.id)).get();
+      if (userRecord) {
+        setUser(userRecord);
+      }
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, isLoading, signIn, signUp, signOut, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
