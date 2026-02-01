@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { eq, inArray } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -10,12 +10,10 @@ import { Colors, FontFamily, Spacing, Typography } from '../constants/styles';
 import { db } from '../db/client';
 import { cards } from '../db/models/card';
 import { sourceNotes } from '../db/models/sourcenote';
-import { cardTags, tags as tagsTable } from '../db/models/tag';
-import { deleteCards } from '../db/services';
 
 type ExtractionMethod = 'chunk_paragraph' | 'chunk_header' | 'ai' | 'full';
 
-export default function AllCardsScreen() {
+export default function ReviewQueueScreen() {
   const router = useRouter();
   const [cardList, setCardList] = useState<CardWithSourceNote[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,33 +31,13 @@ export default function AllCardsScreen() {
           timesSeen: cards.timesSeen,
           inReviewQueue: cards.inReviewQueue,
           extractionMethod: cards.extractionMethod,
+          tags: cards.tags,
           projectId: cards.projectId,
           sourceNoteTitle: sourceNotes.originalFileName,
         })
         .from(cards)
-        .leftJoin(sourceNotes, eq(cards.sourceNoteId, sourceNotes.id));
-
-      // Fetch tags for these cards
-      const cardIds = data.map(c => c.id);
-      let cardTagsMap: Record<number, string[]> = {};
-      
-      if (cardIds.length > 0) {
-        const tagsData = await db
-          .select({
-            cardId: cardTags.cardId,
-            tagName: tagsTable.name
-          })
-          .from(cardTags)
-          .innerJoin(tagsTable, eq(cardTags.tagId, tagsTable.id))
-          .where(inArray(cardTags.cardId, cardIds));
-
-        for (const tag of tagsData) {
-          if (!cardTagsMap[tag.cardId]) {
-            cardTagsMap[tag.cardId] = [];
-          }
-          cardTagsMap[tag.cardId].push(tag.tagName);
-        }
-      }
+        .leftJoin(sourceNotes, eq(cards.sourceNoteId, sourceNotes.id))
+        .where(eq(cards.inReviewQueue, true));
 
       setCardList(
         data.map((row) => ({
@@ -71,26 +49,16 @@ export default function AllCardsScreen() {
           inReviewQueue: row.inReviewQueue,
           extractionMethod: row.extractionMethod as ExtractionMethod,
           sourceNoteTitle: row.sourceNoteTitle || 'Unknown Source',
-          tags: cardTagsMap[row.id] || [],
+          tags: row.tags || [],
           projectId: row.projectId,
         }))
       );
     } catch (error) {
-      console.error('Failed to fetch cards:', error);
+      console.error('Failed to fetch review queue cards:', error);
     } finally {
       setLoading(false);
     }
   }, []);
-
-  const handleDeleteCards = useCallback(async (cardIds: number[]) => {
-    try {
-      await deleteCards(cardIds);
-      // Refresh the list after deletion
-      await fetchCards();
-    } catch (error) {
-      console.error('Failed to delete cards:', error);
-    }
-  }, [fetchCards]);
 
   useFocusEffect(
     useCallback(() => {
@@ -105,7 +73,7 @@ export default function AllCardsScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={Colors.text.base} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>All Cards</Text>
+        <Text style={styles.headerTitle}>Review Queue</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -113,9 +81,8 @@ export default function AllCardsScreen() {
         cardList={cardList} 
         loading={loading} 
         showFilters={true}
-        emptyMessage="No cards found"
-        emptySubtext="Try adjusting your filters"
-        onDeleteCards={handleDeleteCards}
+        emptyMessage="Review queue is empty"
+        emptySubtext="No cards are currently in your review queue"
         onCardUpdated={fetchCards}
       />
     </SafeAreaView>
