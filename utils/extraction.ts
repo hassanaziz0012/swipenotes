@@ -48,7 +48,7 @@ export const processTextExtraction = async (text: string, userId: number, fileNa
         // 3. Check word count and delegate
         const wordCount = text.trim().split(/\s+/).length;
 
-        if (wordCount <= 250) {
+        if (wordCount <= 150) {
             return await extract_full(text, userId, sourceNoteId, wordCount);
         } else {
             return await extract_chunks(text, userId, sourceNoteId, wordCount);
@@ -87,7 +87,7 @@ const extract_chunks = async (text: string, userId: number, sourceNoteId: number
 const extractSection = async (text: string, userId: number, sourceNoteId: number) => {
     const wordCount = text.trim().split(/\s+/).length;
 
-    if (wordCount <= 250) {
+    if (wordCount <= 150) {
         try {
             return await createCard(userId, sourceNoteId, text.trim(), wordCount, 'chunk_header');
         } catch (error) {
@@ -110,7 +110,7 @@ const extractParagraph = async (text: string, userId: number, sourceNoteId: numb
         const paraWordCount = paragraph.trim().split(/\s+/).length;
 
         // Validating if adding the next paragraph stays within limit
-        if (currentWordCount + paraWordCount <= 250) {
+        if (currentWordCount + paraWordCount <= 150) {
             currentChunk = currentChunk ? currentChunk + "\n\n" + paragraph : paragraph;
             currentWordCount += paraWordCount;
         } else {
