@@ -125,6 +125,26 @@ export async function deleteProject(projectId: number): Promise<void> {
     }
 }
 
+export async function getProjectById(projectId: number): Promise<Project | undefined> {
+    try {
+        const result = await db.select().from(projects).where(eq(projects.id, projectId)).limit(1);
+        return result[0];
+    } catch (error) {
+        console.error('Failed to get project by id:', error);
+        throw error;
+    }
+}
+
+export async function getSourceNoteById(sourceNoteId: number) {
+    try {
+        const result = await db.select().from(sourceNotes).where(eq(sourceNotes.id, sourceNoteId)).limit(1);
+        return result[0];
+    } catch (error) {
+        console.error('Failed to get source note by id:', error);
+        throw error;
+    }
+}
+
 export async function deleteProjects(projectIds: number[]): Promise<void> {
     try {
         await db.delete(projects).where(inArray(projects.id, projectIds));
