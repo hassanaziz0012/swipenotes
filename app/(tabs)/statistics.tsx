@@ -1,28 +1,78 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
+import React, { useCallback, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { DailySwipesCountCard } from '../../components/statistics/DailySwipesCountCard';
+import { SessionList } from '../../components/statistics/SessionList';
+import { StatisticCard } from '../../components/statistics/StatisticCard';
+import { Colors } from '../../constants/styles';
+import { useAuth } from '../../context/AuthContext';
+import { Session } from '../../db/models/session';
+import { getDailySwipesCount, getSessions, getTotalCardCount } from '../../db/services';
 
 export default function StatisticsScreen() {
+  const { user } = useAuth();
+  const [dailySwipesCount, setDailySwipesCount] = useState(0);
+  const [totalCardsCount, setTotalCardsCount] = useState(0);
+  const [sessions, setSessions] = useState<Session[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const fetchStatistics = async () => {
+        if (user) {
+          try {
+            const [dailyCount, totalCount, userSessions] = await Promise.all([
+              getDailySwipesCount(user.id),
+              getTotalCardCount(user.id),
+              getSessions(user.id),
+            ]);
+            setDailySwipesCount(dailyCount);
+            setTotalCardsCount(totalCount);
+            setSessions(userSessions);
+          } catch (error) {
+            console.error('Failed to fetch statistics:', error);
+          }
+        }
+      };
+
+      fetchStatistics();
+    }, [user])
+  );
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Statistics</Text>
-      <Text style={styles.subtitle}>View your stats here.</Text>
-    </View>
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      <View style={styles.cardsContainer}>
+        <DailySwipesCountCard count={dailySwipesCount} />
+        <StatisticCard 
+          title="Total Cards" 
+          count={totalCardsCount} 
+          iconName="layers" 
+          iconColor={Colors.primary.base}
+        />
+      </View>
+      <SessionList sessions={sessions} />
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
+    padding: 16,
+    backgroundColor: Colors.background.base,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 8,
+    marginBottom: 16,
+    marginTop: 40,
+    color: Colors.text.base,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
+  cardsContainer: {
+    flexDirection: 'column',
+    gap: 16,
+    width: '100%',
+  },
+  contentContainer: {
+    paddingBottom: 20,
   },
 });
