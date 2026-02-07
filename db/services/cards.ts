@@ -1,22 +1,8 @@
-import { eq, inArray } from 'drizzle-orm';
-import { db } from './client';
-import { cards } from './models/card';
-import { projects, type NewProject, type Project } from './models/project';
-import { sourceNotes } from './models/sourcenote';
-import { cardTags, tags as tagsTable } from './models/tag';
-import { users, type UserSettings } from './models/user';
+import { and, count, eq, gte, inArray, lt } from 'drizzle-orm';
+import { db } from '../client';
+import { cards } from '../models/card';
+import { cardTags, tags as tagsTable } from '../models/tag';
 
-// Source Note Services
-export async function deleteSourceNote(id: number) {
-  return await db.transaction(async (tx) => {
-    // Delete associated cards first
-    await tx.delete(cards).where(eq(cards.sourceNoteId, id));
-    // Delete the source note
-    await tx.delete(sourceNotes).where(eq(sourceNotes.id, id));
-  });
-}
-
-// Card Services
 export async function deleteCards(cardIds: number[]): Promise<void> {
     try {
         await db.delete(cards).where(inArray(cards.id, cardIds));
@@ -73,87 +59,6 @@ export async function toggleCardsReviewQueue(cardIds: number[]): Promise<void> {
     }
 }
 
-// User Services
-export async function updateUserSettings(userId: number, settings: UserSettings): Promise<void> {
-    try {
-        await db.update(users)
-            .set(settings)
-            .where(eq(users.id, userId));
-    } catch (error) {
-        console.error('Failed to update user settings:', error);
-        throw error;
-    }
-}
-
-// Project Services
-export async function createProject(project: Omit<NewProject, 'id'>): Promise<Project> {
-    try {
-        const result = await db.insert(projects).values(project).returning();
-        return result[0];
-    } catch (error) {
-        console.error('Failed to create project:', error);
-        throw error;
-    }
-}
-
-export async function getProjectsByUser(userId: number): Promise<Project[]> {
-    try {
-        return await db.select().from(projects).where(eq(projects.userId, userId));
-    } catch (error) {
-        console.error('Failed to get projects:', error);
-        throw error;
-    }
-}
-
-export async function updateProject(projectId: number, updates: Partial<Omit<NewProject, 'id' | 'userId' | 'createdAt'>>): Promise<void> {
-    try {
-        await db.update(projects)
-            .set(updates)
-            .where(eq(projects.id, projectId));
-    } catch (error) {
-        console.error('Failed to update project:', error);
-        throw error;
-    }
-}
-
-export async function deleteProject(projectId: number): Promise<void> {
-    try {
-        await db.delete(projects).where(eq(projects.id, projectId));
-    } catch (error) {
-        console.error('Failed to delete project:', error);
-        throw error;
-    }
-}
-
-export async function getProjectById(projectId: number): Promise<Project | undefined> {
-    try {
-        const result = await db.select().from(projects).where(eq(projects.id, projectId)).limit(1);
-        return result[0];
-    } catch (error) {
-        console.error('Failed to get project by id:', error);
-        throw error;
-    }
-}
-
-export async function getSourceNoteById(sourceNoteId: number) {
-    try {
-        const result = await db.select().from(sourceNotes).where(eq(sourceNotes.id, sourceNoteId)).limit(1);
-        return result[0];
-    } catch (error) {
-        console.error('Failed to get source note by id:', error);
-        throw error;
-    }
-}
-
-export async function deleteProjects(projectIds: number[]): Promise<void> {
-    try {
-        await db.delete(projects).where(inArray(projects.id, projectIds));
-    } catch (error) {
-        console.error('Failed to delete projects:', error);
-        throw error;
-    }
-}
-
 export async function updateCardProject(cardId: number, projectId: number | null): Promise<void> {
     try {
         await db.update(cards)
@@ -194,9 +99,56 @@ export async function updateCardTags(cardId: number, tags: string[]): Promise<vo
                 });
             }
         });
-        
     } catch (error) {
         console.error('Failed to update card tags:', error);
+        throw error;
+    }
+}
+
+export async function updateCard(cardId: number, updates: Partial<typeof cards.$inferInsert>): Promise<void> {
+    try {
+        await db.update(cards)
+            .set(updates)
+            .where(eq(cards.id, cardId));
+    } catch (error) {
+        console.error('Failed to update card:', error);
+        throw error;
+    }
+}
+
+
+export async function getDailySwipesCount(userId: number): Promise<number> {
+    try {
+        const now = new Date();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+
+        const result = await db.select({ count: count() })
+            .from(cards)
+            .where(
+                and(
+                    eq(cards.userId, userId),
+                    gte(cards.lastSeen, startOfDay),
+                    lt(cards.lastSeen, endOfDay)
+                )
+            );
+        
+        return result[0].count;
+    } catch (error) {
+        console.error('Failed to get daily swipes count:', error);
+        throw error;
+    }
+}
+
+export async function getTotalCardCount(userId: number): Promise<number> {
+    try {
+        const result = await db.select({ count: count() })
+            .from(cards)
+            .where(eq(cards.userId, userId));
+            
+        return result[0].count;
+    } catch (error) {
+        console.error('Failed to get total card count:', error);
         throw error;
     }
 }
