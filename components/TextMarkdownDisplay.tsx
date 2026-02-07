@@ -17,7 +17,7 @@ export function TextMarkdownDisplay({ children, style }: TextMarkdownDisplayProp
 
 const markdownStyles = {
   body: {
-    ...Typography.base,
+    ...Typography.sm,
     color: Colors.text.base,
     fontFamily: FontFamily.regular,
   },
