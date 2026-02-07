@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import * as Crypto from 'expo-crypto';
 import { db } from '../db/client';
 import { cards } from '../db/models/card';
+import { projects } from '../db/models/project';
 import { sourceNotes } from '../db/models/sourcenote';
 import { cardTags, tags as tagsTable } from '../db/models/tag';
 
@@ -142,7 +143,7 @@ const extractParagraph = async (text: string, userId: number, sourceNoteId: numb
     return createdCards;
 };
 
-const createCard = async (userId: number, sourceNoteId: number, content: string, wordCount: number, extractionMethod: 'full' | 'chunk_header' | 'chunk_paragraph' | 'ai', tags: string[] = []) => {
+const createCard = async (userId: number, sourceNoteId: number, content: string, wordCount: number, extractionMethod: 'full' | 'chunk_header' | 'chunk_paragraph' | 'ai', tags: string[] = [], projectId: number | null = null) => {
     // Use transaction to ensure card and tags are created together
     return await db.transaction(async (tx) => {
         // 1. Create Card
@@ -150,6 +151,7 @@ const createCard = async (userId: number, sourceNoteId: number, content: string,
             userId,
             sourceNoteId,
             content,
+            projectId,
             createdAt: new Date(),
             intervalDays: 1,
             timesSeen: 0,
@@ -201,6 +203,7 @@ interface UsageMetadata {
 interface AIExtractionRequest {
     content: string;
     existing_tags: string[];
+    existing_projects: string[];
 }
 
 // AIExtractionResponse represents the response from this API
@@ -220,6 +223,7 @@ interface ErrorResponse {
 interface AIExtractedCard {
     content: string;
     suggested_tags: string[];
+    suggested_project?: string;
 }
 
 // Interface for parsed AI extraction result
@@ -246,6 +250,10 @@ export const extractWithAI = async (content: string, existingTags: string[], use
             throw new Error("This source note has already been added.");
         }
 
+        // Fetch user projects
+        const userProjects = await db.select().from(projects).where(eq(projects.userId, userId));
+        const projectNames = userProjects.map(p => p.name);
+
         // 2. Call AI extraction API
         const response = await fetch('https://swipenotes-api.vercel.app/api/ai-extraction', {
             method: 'POST',
@@ -255,6 +263,7 @@ export const extractWithAI = async (content: string, existingTags: string[], use
             body: JSON.stringify({
                 content,
                 existing_tags: existingTags,
+                existing_projects: projectNames,
             } as AIExtractionRequest),
         });
 
@@ -290,7 +299,16 @@ export const extractWithAI = async (content: string, existingTags: string[], use
         const createdCards: any[] = [];
         for (const card of parsedCards.cards) {
             const wordCount = card.content.trim().split(/\s+/).length;
-            const createdCard = await createCard(userId, sourceNoteId, card.content, wordCount, 'ai', card.suggested_tags);
+
+            let projectId: number | null = null;
+            if (card.suggested_project) {
+                const project = userProjects.find(p => p.name === card.suggested_project);
+                if (project) {
+                    projectId = project.id;
+                }
+            }
+
+            const createdCard = await createCard(userId, sourceNoteId, card.content, wordCount, 'ai', card.suggested_tags, projectId);
             createdCards.push(...createdCard);
         }
 
