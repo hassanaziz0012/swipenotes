@@ -1,3 +1,4 @@
+import { MAX_TAGS } from '@/utils/tagsCleanup';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useRef, useState } from 'react';
 import { Animated, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -14,6 +15,7 @@ interface CardListItemProps {
   createdAt: Date;
   lastSeen: Date | null;
   timesSeen: number;
+  intervalDays: number;
   inReviewQueue: boolean;
   extractionMethod: ExtractionMethod;
   tags: string[];
@@ -41,6 +43,37 @@ function formatDate(date: Date): string {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function getNextReviewDate(lastSeen: Date | null, intervalDays: number): Date | null {
+  if (!lastSeen) return null;
+  const nextReview = new Date(lastSeen);
+  nextReview.setDate(nextReview.getDate() + intervalDays);
+  return nextReview;
+}
+
+function formatRelativeDate(date: Date): string {
+  const now = new Date();
+  const diffTime = date.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays < 0) {
+    const absDays = Math.abs(diffDays);
+    if (absDays === 1) return '1 day ago';
+    if (absDays < 7) return `${absDays} days ago`;
+    if (absDays < 14) return '1 week ago';
+    if (absDays < 30) return `${Math.floor(absDays / 7)} weeks ago`;
+    if (absDays < 60) return '1 month ago';
+    return `${Math.floor(absDays / 30)} months ago`;
+  }
+  
+  if (diffDays === 0) return 'today';
+  if (diffDays === 1) return 'tomorrow';
+  if (diffDays < 7) return `${diffDays} days later`;
+  if (diffDays < 14) return '1 week later';
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks later`;
+  if (diffDays < 60) return '1 month later';
+  return `${Math.floor(diffDays / 30)} months later`;
 }
 
 function truncateToWords(text: string, maxWords: number): string {
@@ -77,6 +110,7 @@ export function CardListItem({
   createdAt,
   lastSeen,
   timesSeen,
+  intervalDays,
   inReviewQueue,
   extractionMethod,
   tags,
@@ -103,6 +137,7 @@ export function CardListItem({
   const [editedInReviewQueue, setEditedInReviewQueue] = useState(inReviewQueue);
   const [isSaving, setIsSaving] = useState(false);
   const [showProjectPicker, setShowProjectPicker] = useState(false);
+  const [showAllTags, setShowAllTags] = useState(false);
 
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
@@ -148,6 +183,7 @@ export function CardListItem({
     setEditedTags(tags);
     setEditedInReviewQueue(inReviewQueue);
     setShowProjectPicker(false);
+    setShowAllTags(false);
   };
 
   const handleSaveContent = async () => {
@@ -182,11 +218,16 @@ export function CardListItem({
   };
 
   const toggleEditedTag = (tag: string) => {
-    setEditedTags(prev => 
-      prev.includes(tag)
-        ? prev.filter(t => t !== tag)
-        : [...prev, tag]
-    );
+    setEditedTags(prev => {
+      if (prev.includes(tag)) {
+        return prev.filter(t => t !== tag);
+      }
+      // Enforce max 10 tags limit
+      if (prev.length >= MAX_TAGS) {
+        return prev;
+      }
+      return [...prev, tag];
+    });
   };
 
   const getProjectName = (id: number | null) => {
@@ -218,62 +259,83 @@ export function CardListItem({
             </View>
           )}
 
+          {/* Pills Row */}
+          <View style={styles.pillsContainer}>
+            {/* Project Pill */}
+            {(() => {
+              const project = availableProjects.find(p => p.id === projectId);
+              if (project) {
+                return (
+                  <View style={styles.projectPill}>
+                    <View style={[styles.projectColorDot, { backgroundColor: project.color }]} />
+                    <Text style={styles.projectPillText} numberOfLines={1}>{project.name}</Text>
+                  </View>
+                );
+              }
+              return null;
+            })()}
+            {/* Source Pill */}
+            <View style={styles.sourcePill}>
+              <Ionicons name="document-text-outline" size={14} color={Colors.text.subtle} />
+              <Text style={styles.sourcePillText} numberOfLines={1}>{sourceNoteTitle}</Text>
+            </View>
+          </View>
+
           {/* Content Section */}
           <View style={styles.contentSection}>
             <TextMarkdownDisplay>{truncateToWords(content, 50)}</TextMarkdownDisplay>
           </View>
 
-          {/* Divider */}
-          <View style={styles.divider} />
-
-          {/* Metadata Section */}
-          <View style={styles.metadataSection}>
-          {/* Source Note */}
-          <View style={styles.metaRow}>
-            <Ionicons name="document-text-outline" size={16} color={Colors.text.subtle} />
-            <Text style={styles.metaLabel}>Source:</Text>
-            <Text style={styles.metaValue} numberOfLines={1}>{sourceNoteTitle}</Text>
-          </View>
-
-          {/* Created At */}
-          <View style={styles.metaRow}>
-            <Ionicons name="calendar-outline" size={16} color={Colors.text.subtle} />
-            <Text style={styles.metaLabel}>Created:</Text>
-            <Text style={styles.metaValue}>{formatDate(createdAt)}</Text>
-          </View>
-
-          {/* Last Seen */}
-          <View style={styles.metaRow}>
-            <Ionicons name="eye-outline" size={16} color={Colors.text.subtle} />
-            <Text style={styles.metaLabel}>Last seen:</Text>
-            <Text style={styles.metaValue}>{lastSeen ? formatDate(lastSeen) : 'Never'}</Text>
-          </View>
-
-          {/* Times Seen */}
-          <View style={styles.metaRow}>
-            <Ionicons name="repeat-outline" size={16} color={Colors.text.subtle} />
-            <Text style={styles.metaLabel}>Times seen:</Text>
-            <Text style={styles.metaValue}>{timesSeen}</Text>
-          </View>
-
-          {/* In Review Queue */}
-          <View style={styles.metaRow}>
-            <Ionicons name="layers-outline" size={16} color={Colors.text.subtle} />
-            <Text style={styles.metaLabel}>In review:</Text>
-            {inReviewQueue ? (
-              <Ionicons name="checkmark-circle" size={18} color="hsl(140, 60%, 45%)" />
-            ) : (
-              <Ionicons name="close-circle" size={18} color="hsl(0, 60%, 55%)" />
-            )}
-          </View>
-
-          {/* Extraction Method */}
-          <View style={styles.metaRow}>
-            <Ionicons name="construct-outline" size={16} color={Colors.text.subtle} />
-            <Text style={styles.metaLabel}>Method:</Text>
+          {/* Metadata Pills Row */}
+          <View style={styles.metadataPillsRow}>
             <ExtractionMethodPill method={extractionMethod} />
+            <View style={styles.metadataPill}>
+              <Ionicons name="time-outline" size={14} color={Colors.text.subtle} />
+              <Text style={styles.metadataPillText}>
+                {(() => {
+                  const nextReview = getNextReviewDate(lastSeen, intervalDays);
+                  if (!nextReview) return 'Not scheduled';
+                  return `${formatDate(nextReview)} (${formatRelativeDate(nextReview)})`;
+                })()}
+              </Text>
+            </View>
+            <View style={styles.metadataPill}>
+              <Ionicons name="eye-outline" size={14} color={Colors.text.subtle} />
+              <Text style={styles.metadataPillText}>
+                {lastSeen ? formatDate(lastSeen) : 'Never'}
+              </Text>
+            </View>
+            <View style={styles.metadataPill}>
+              <Ionicons name="repeat-outline" size={14} color={Colors.text.subtle} />
+              <Text style={styles.metadataPillText}>{timesSeen}x seen</Text>
+            </View>
+            <View style={[styles.metadataPill, inReviewQueue ? styles.inReviewPillActive : styles.inReviewPillInactive]}>
+              <Ionicons 
+                name={inReviewQueue ? "checkmark-circle" : "close-circle"} 
+                size={14} 
+                color={inReviewQueue ? "hsl(140, 60%, 45%)" : "hsl(0, 60%, 55%)"} 
+              />
+              <Text style={[styles.metadataPillText, inReviewQueue ? styles.inReviewTextActive : styles.inReviewTextInactive]}>
+                {inReviewQueue ? 'In queue' : 'Not in queue'}
+              </Text>
+            </View>
           </View>
-          </View>
+
+          {/* Divider before Tags */}
+          {tags.length > 0 && <View style={styles.cardTagsDivider} />}
+
+          {/* Tags Row */}
+          {tags.length > 0 && (
+            <View style={styles.tagsRow}>
+              {tags.map((tag, index) => (
+                <View key={index} style={styles.tagPill}>
+                  <Text style={styles.tagPillText}>
+                    {tag.replace(/([a-z])([A-Z])/g, '$1 $2')}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
         </Animated.View>
       </Pressable>
 
@@ -386,26 +448,7 @@ export function CardListItem({
                         </View>
                       </View>
 
-                      {/* Tags Editor */}
-                      <View style={styles.optionRow}>
-                        <Text style={styles.optionLabel}>Tags:</Text>
-                        <View style={styles.tagsContainer}>
-                          {availableTags.map(tag => {
-                            const isSelected = editedTags.includes(tag);
-                            return (
-                              <TouchableOpacity
-                                key={tag}
-                                style={[styles.tagChip, isSelected && styles.tagChipSelected]}
-                                onPress={() => toggleEditedTag(tag)}
-                              >
-                                <Text style={[styles.tagText, isSelected && styles.tagTextSelected]}>
-                                  {tag.replace(/([a-z])([A-Z])/g, '$1 $2')}
-                                </Text>
-                              </TouchableOpacity>
-                            );
-                          })}
-                        </View>
-                      </View>
+
 
                       {/* Review Queue Toggle */}
                       <View style={styles.optionRow}>
@@ -436,6 +479,55 @@ export function CardListItem({
                         textAlignVertical="top"
                         blurOnSubmit={false}
                       />
+
+                      <View style={styles.divider} />
+
+                      {/* Tags Editor - Moved to end */}
+                      <View style={styles.optionRow}>
+                        <Text style={styles.optionLabel}>Tags (max: {MAX_TAGS}):</Text>
+                        <View style={[
+                          styles.tagsContainer, 
+                          !showAllTags && styles.tagsContainerCollapsed
+                        ]}>
+                          {(() => {
+                            const tagsToShow = showAllTags ? availableTags : availableTags;
+                            return tagsToShow.map(tag => {
+                              const isSelected = editedTags.includes(tag);
+                              const isDisabled = !isSelected && editedTags.length >= MAX_TAGS;
+                              return (
+                                <TouchableOpacity
+                                  key={tag}
+                                  style={[
+                                    styles.tagChip, 
+                                    isSelected && styles.tagChipSelected,
+                                    isDisabled && styles.tagChipDisabled
+                                  ]}
+                                  onPress={() => toggleEditedTag(tag)}
+                                  disabled={isDisabled}
+                                >
+                                  <Text style={[
+                                    styles.tagText, 
+                                    isSelected && styles.tagTextSelected,
+                                    isDisabled && styles.tagTextDisabled
+                                  ]}>
+                                    {tag.replace(/([a-z])([A-Z])/g, '$1 $2')}
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            });
+                          })()}
+                        </View>
+                        {!showAllTags && availableTags.length > 15 && (
+                          <TouchableOpacity onPress={() => setShowAllTags(true)} style={styles.showMoreButton}>
+                            <Text style={styles.showMoreText}>Show more</Text>
+                          </TouchableOpacity>
+                        )}
+                        {showAllTags && availableTags.length > 15 && (
+                          <TouchableOpacity onPress={() => setShowAllTags(false)} style={styles.showMoreButton}>
+                            <Text style={styles.showMoreText}>Show less</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
                     </View>
                   ) : (
                     <Pressable onPress={handleSwitchToEditMode}>
@@ -471,6 +563,57 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary.base,
     borderWidth: 2,
   },
+  pillsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingHorizontal: Spacing['4'],
+    paddingTop: Spacing['3'],
+  },
+  projectPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: Colors.background.base,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  projectColorDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  projectPillText: {
+    fontSize: Typography.xs.fontSize,
+    fontFamily: FontFamily.regular,
+    color: Colors.text.subtle,
+  },
+  sourcePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: Colors.background.base,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  sourcePillText: {
+    fontSize: Typography.xs.fontSize,
+    fontFamily: FontFamily.regular,
+    color: Colors.text.subtle,
+    flexShrink: 1,
+  },
   checkmarkContainer: {
     position: 'absolute',
     top: Spacing['2'],
@@ -482,32 +625,50 @@ const styles = StyleSheet.create({
   contentSection: {
     padding: Spacing['4'],
   },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.border.subtle,
-    marginHorizontal: Spacing['4'],
+  metadataPillsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingHorizontal: Spacing['4'],
+    paddingBottom: Spacing['2'],
   },
-  metadataSection: {
-    padding: Spacing['4'],
-    gap: Spacing['2'],
-    backgroundColor: Colors.background.base,
+  tagsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    paddingHorizontal: Spacing['4'],
+    paddingBottom: Spacing['3'],
   },
-  metaRow: {
+  metadataPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing['2'],
+    gap: 6,
+    backgroundColor: Colors.background.base,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  metaLabel: {
-    fontSize: Typography.sm.fontSize,
+  metadataPillText: {
+    fontSize: Typography.xs.fontSize,
     fontFamily: FontFamily.regular,
     color: Colors.text.subtle,
-    minWidth: 75,
   },
-  metaValue: {
-    fontSize: Typography.sm.fontSize,
-    fontFamily: FontFamily.regular,
-    color: Colors.text.base,
-    flex: 1,
+  inReviewPillActive: {
+    backgroundColor: 'hsl(140, 50%, 92%)',
+  },
+  inReviewPillInactive: {
+    backgroundColor: 'hsl(0, 50%, 94%)',
+  },
+  inReviewTextActive: {
+    color: 'hsl(140, 60%, 35%)',
+  },
+  inReviewTextInactive: {
+    color: 'hsl(0, 60%, 45%)',
   },
   // Modal Styles
   modalOverlay: {
@@ -662,5 +823,53 @@ const styles = StyleSheet.create({
   tagTextSelected: {
     color: Colors.primary.dark3,
     fontFamily: FontFamily.bold,
+  },
+  tagsListContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing['1'],
+    flex: 1,
+  },
+  tagPill: {
+    backgroundColor: Colors.primary.light6,
+    borderRadius: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+  },
+  tagPillText: {
+    fontSize: Typography.xs.fontSize,
+    fontFamily: FontFamily.regular,
+    color: Colors.primary.dark3,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: Colors.border.subtle,
+    marginVertical: Spacing['3'],
+  },
+  cardTagsDivider: {
+    height: 1,
+    backgroundColor: Colors.border.subtle,
+    marginHorizontal: Spacing['4'],
+    marginTop: Spacing['2'],
+    marginBottom: Spacing['1'],
+  },
+  tagsContainerCollapsed: {
+    maxHeight: 100, // Approximately 3 rows of tags
+    overflow: 'hidden',
+  },
+  tagChipDisabled: {
+    opacity: 0.4,
+  },
+  tagTextDisabled: {
+    color: Colors.text.subtle,
+  },
+  showMoreButton: {
+    marginTop: Spacing['2'],
+    alignSelf: 'flex-start',
+  },
+  showMoreText: {
+    fontSize: Typography.sm.fontSize,
+    fontFamily: FontFamily.regular,
+    color: Colors.primary.base,
   },
 });

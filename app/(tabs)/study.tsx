@@ -4,13 +4,16 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import SwipeCard from '../../components/SwipeCard';
 import { Colors, Typography } from '../../constants/styles';
 import { useAuth } from '../../context/AuthContext';
-import { setCardInReviewQueue } from '../../db/services';
+import { type Project } from '../../db/models/project';
+import { getProjectById, getSourceNoteById, setCardInReviewQueue } from '../../db/services';
 import { retrieve_eligible_cards } from '../../utils/swipeSession';
 
 export default function StudyScreen() {
     const { user } = useAuth();
     const [cards, setCards] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [projects, setProjects] = useState<Record<number, Project>>({});
+    const [sourceNoteTitles, setSourceNoteTitles] = useState<Record<number, string>>({});
 
     useEffect(() => {
         const fetchCards = async () => {
@@ -18,6 +21,30 @@ export default function StudyScreen() {
                 try {
                     const fetchedCards = await retrieve_eligible_cards(user.id);
                     setCards(fetchedCards);
+
+                    // Fetch projects and source notes for the cards
+                    const projectsMap: Record<number, Project> = {};
+                    const sourceNotesMap: Record<number, string> = {};
+
+                    for (const card of fetchedCards) {
+                        // Fetch project if we haven't already
+                        if (card.projectId && !projectsMap[card.projectId]) {
+                            const project = await getProjectById(card.projectId);
+                            if (project) {
+                                projectsMap[card.projectId] = project;
+                            }
+                        }
+                        // Fetch source note if we haven't already
+                        if (card.sourceNoteId && !sourceNotesMap[card.sourceNoteId]) {
+                            const sourceNote = await getSourceNoteById(card.sourceNoteId);
+                            if (sourceNote) {
+                                sourceNotesMap[card.sourceNoteId] = sourceNote.originalFileName;
+                            }
+                        }
+                    }
+
+                    setProjects(projectsMap);
+                    setSourceNoteTitles(sourceNotesMap);
                 } catch (error) {
                     console.error("Failed to fetch cards:", error);
                 } finally {
@@ -67,7 +94,6 @@ export default function StudyScreen() {
 
     return (
         <GestureHandlerRootView style={styles.container}>
-            <Text style={styles.header}>Study Session</Text>
             <View style={styles.cardStack}>
                 {cards.map((card, index) => {
                     // Only render the top 3 cards for performance, but need to keep others in state
@@ -79,6 +105,8 @@ export default function StudyScreen() {
                             index={index}
                             onSwipeLeft={() => handleSwipeLeft(card.id)}
                             onSwipeRight={() => handleSwipeRight(card.id)}
+                            project={card.projectId ? projects[card.projectId] : undefined}
+                            sourceNoteTitle={sourceNoteTitles[card.sourceNoteId]}
                         />
                     );
                 }).reverse()} 
@@ -102,12 +130,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: Colors.background.base,
     },
-    header: {
-        ...Typography['2xl'],
-        color: Colors.text.base,
-        textAlign: 'center',
-        marginBottom: 20,
-    },
+
     cardStack: {
         flex: 1,
         alignItems: 'center',

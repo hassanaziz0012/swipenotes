@@ -17,6 +17,7 @@ export interface CardWithSourceNote {
   createdAt: Date;
   lastSeen: Date | null;
   timesSeen: number;
+  intervalDays: number;
   inReviewQueue: boolean;
   extractionMethod: ExtractionMethod;
   sourceNoteTitle: string;
@@ -26,6 +27,7 @@ export interface CardWithSourceNote {
 
 interface FilterState {
   sourceNoteId: number | null;
+  projectId: number | null;
   extractionMethod: ExtractionMethod | null;
   tags: string[];
 }
@@ -59,6 +61,7 @@ export function CardList({
   // Filter State
   const [filters, setFilters] = useState<FilterState>({
     sourceNoteId: null,
+    projectId: null,
     extractionMethod: null,
     tags: [],
   });
@@ -74,6 +77,7 @@ export function CardList({
 
   // Modal Visibility
   const [showSourceModal, setShowSourceModal] = useState(false);
+  const [showProjectModal, setShowProjectModal] = useState(false);
   const [showMethodModal, setShowMethodModal] = useState(false);
   const [showTagsModal, setShowTagsModal] = useState(false);
 
@@ -118,6 +122,11 @@ export function CardList({
         }
       }
 
+      // Filter by project
+      if (filters.projectId !== null) {
+        result = result.filter(card => card.projectId === filters.projectId);
+      }
+
       // Filter by extraction method
       if (filters.extractionMethod !== null) {
         result = result.filter(card => card.extractionMethod === filters.extractionMethod);
@@ -137,6 +146,7 @@ export function CardList({
   const clearFilters = () => {
     setFilters({
       sourceNoteId: null,
+      projectId: null,
       extractionMethod: null,
       tags: [],
     });
@@ -257,6 +267,12 @@ export function CardList({
     return opt ? opt.label : 'Extraction';
   };
 
+  const getProjectLabel = (projectId: number | null) => {
+    if (!projectId) return 'Project';
+    const project = availableProjects.find((p) => p.id === projectId);
+    return project ? project.name : 'Project';
+  };
+
   const renderFilterButton = (
     label: string, 
     icon: keyof typeof Ionicons.glyphMap, 
@@ -284,7 +300,7 @@ export function CardList({
     </TouchableOpacity>
   );
 
-  const hasActiveFilters = filters.sourceNoteId !== null || filters.extractionMethod !== null || filters.tags.length > 0;
+  const hasActiveFilters = filters.sourceNoteId !== null || filters.projectId !== null || filters.extractionMethod !== null || filters.tags.length > 0;
 
   return (
     <View style={styles.wrapper}>
@@ -322,16 +338,22 @@ export function CardList({
               () => setShowSourceModal(true)
             )}
             {renderFilterButton(
-              getMethodLabel(filters.extractionMethod),
-              'options-outline',
-              filters.extractionMethod !== null,
-              () => setShowMethodModal(true)
+              getProjectLabel(filters.projectId),
+              'folder-outline',
+              filters.projectId !== null,
+              () => setShowProjectModal(true)
             )}
             {renderFilterButton(
               filters.tags.length > 0 ? `${filters.tags.length} Tag${filters.tags.length > 1 ? 's' : ''}` : 'Tags',
               'pricetag-outline',
               filters.tags.length > 0,
               () => setShowTagsModal(true)
+            )}
+            {renderFilterButton(
+              getMethodLabel(filters.extractionMethod),
+              'options-outline',
+              filters.extractionMethod !== null,
+              () => setShowMethodModal(true)
             )}
           </ScrollView>
           
@@ -364,6 +386,7 @@ export function CardList({
                 createdAt={card.createdAt}
                 lastSeen={card.lastSeen}
                 timesSeen={card.timesSeen}
+                intervalDays={card.intervalDays}
                 inReviewQueue={card.inReviewQueue}
                 extractionMethod={card.extractionMethod}
                 isSelected={selectedCardIds.has(card.id)}
@@ -416,6 +439,48 @@ export function CardList({
               )}
             />
              <TouchableOpacity style={styles.modalCloseButton} onPress={() => setShowSourceModal(false)}>
+              <Text style={styles.modalCloseButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* Project Modal */}
+      <Modal visible={showProjectModal} transparent animationType="slide">
+        <Pressable style={styles.modalOverlay} onPress={() => setShowProjectModal(false)}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Project</Text>
+            <FlatList
+              data={[{ id: -1, name: 'All Projects', color: '', userId: 0, createdAt: new Date() } as Project, ...availableProjects]} 
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={({ item }) => (
+                <TouchableOpacity 
+                  style={[
+                    styles.modalItem, 
+                    (item.id === -1 && filters.projectId === null) || item.id === filters.projectId ? styles.modalItemSelected : {}
+                  ]}
+                  onPress={() => {
+                    setFilters(prev => ({ ...prev, projectId: item.id === -1 ? null : item.id }));
+                    setShowProjectModal(false);
+                  }}
+                >
+                  {item.id !== -1 && (
+                    <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: item.color, marginRight: Spacing['2'] }} />
+                  )}
+                  <Text style={[
+                      styles.modalItemText,
+                      { flex: 1 },
+                      (item.id === -1 && filters.projectId === null) || item.id === filters.projectId ? styles.modalItemTextSelected : {}
+                  ]}>
+                    {item.name}
+                  </Text>
+                  {((item.id === -1 && filters.projectId === null) || item.id === filters.projectId) && (
+                    <Ionicons name="checkmark" size={20} color={Colors.primary.base} />
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+             <TouchableOpacity style={styles.modalCloseButton} onPress={() => setShowProjectModal(false)}>
               <Text style={styles.modalCloseButtonText}>Cancel</Text>
             </TouchableOpacity>
           </View>

@@ -1,5 +1,6 @@
+import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Dimensions, StyleSheet, View } from 'react-native';
+import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector, ScrollView } from 'react-native-gesture-handler';
 import Animated, {
   Extrapolation,
@@ -10,7 +11,8 @@ import Animated, {
   withTiming
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
-import { Colors } from '../constants/styles';
+import { Colors, FontFamily, Typography } from '../constants/styles';
+import { type Project } from '../db/models/project';
 import { TextMarkdownDisplay } from './TextMarkdownDisplay';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -20,7 +22,7 @@ interface Card {
   id: number;
   content: string;
   sourceNoteId: number;
-  // Add other fields as needed based on db/models/card.ts
+  projectId?: number | null;
 }
 
 interface SwipeCardProps {
@@ -28,9 +30,11 @@ interface SwipeCardProps {
   onSwipeLeft: () => void;
   onSwipeRight: () => void;
   index: number; // 0 is top card
+  project?: Project;
+  sourceNoteTitle?: string;
 }
 
-export default function SwipeCard({ card, onSwipeLeft, onSwipeRight, index }: SwipeCardProps) {
+export default function SwipeCard({ card, onSwipeLeft, onSwipeRight, index, project, sourceNoteTitle }: SwipeCardProps) {
   const translationX = useSharedValue(0);
   const translationY = useSharedValue(0);
   const rotation = useSharedValue(0);
@@ -89,6 +93,23 @@ export default function SwipeCard({ card, onSwipeLeft, onSwipeRight, index }: Sw
                         contentContainerStyle={styles.scrollContent}
                         showsVerticalScrollIndicator={true}
                     >
+                        {/* Pills Row */}
+                        {(project || sourceNoteTitle) && (
+                            <View style={styles.pillsContainer}>
+                                {project && (
+                                    <View style={styles.projectPill}>
+                                        <View style={[styles.projectColorDot, { backgroundColor: project.color }]} />
+                                        <Text style={styles.projectPillText} numberOfLines={1}>{project.name}</Text>
+                                    </View>
+                                )}
+                                {sourceNoteTitle && (
+                                    <View style={styles.sourcePill}>
+                                        <Ionicons name="document-text-outline" size={14} color={Colors.text.subtle} />
+                                        <Text style={styles.sourcePillText} numberOfLines={1}>{sourceNoteTitle}</Text>
+                                    </View>
+                                )}
+                            </View>
+                        )}
                         <TextMarkdownDisplay>
                             {card.content}
                         </TextMarkdownDisplay>
@@ -102,6 +123,23 @@ export default function SwipeCard({ card, onSwipeLeft, onSwipeRight, index }: Sw
                     contentContainerStyle={styles.scrollContent}
                     scrollEnabled={false}
                 >
+                    {/* Pills Row */}
+                    {(project || sourceNoteTitle) && (
+                        <View style={styles.pillsContainer}>
+                            {project && (
+                                <View style={styles.projectPill}>
+                                    <View style={[styles.projectColorDot, { backgroundColor: project.color }]} />
+                                    <Text style={styles.projectPillText} numberOfLines={1}>{project.name}</Text>
+                                </View>
+                            )}
+                            {sourceNoteTitle && (
+                                <View style={styles.sourcePill}>
+                                    <Ionicons name="document-text-outline" size={14} color={Colors.text.subtle} />
+                                    <Text style={styles.sourcePillText} numberOfLines={1}>{sourceNoteTitle}</Text>
+                                </View>
+                            )}
+                        </View>
+                    )}
                     <TextMarkdownDisplay>
                          {card.content}
                     </TextMarkdownDisplay>
@@ -120,7 +158,7 @@ const styles = StyleSheet.create({
   },
   card: {
     width: SCREEN_WIDTH * 0.9,
-    height: SCREEN_WIDTH * 1.2,
+    height: SCREEN_WIDTH * 1.5,
     backgroundColor: Colors.background.card,
     borderRadius: 16,
     overflow: 'hidden',
@@ -145,5 +183,57 @@ const styles = StyleSheet.create({
     padding: 24,
     flexGrow: 1,
     justifyContent: 'center', 
+  },
+  pillsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+  projectPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: Colors.background.base,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  projectColorDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  projectPillText: {
+    fontSize: Typography.xs.fontSize,
+    fontFamily: FontFamily.regular,
+    color: Colors.text.subtle,
+  },
+  sourcePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: Colors.background.base,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
+    flexShrink: 1,
+    maxWidth: '60%',
+  },
+  sourcePillText: {
+    fontSize: Typography.xs.fontSize,
+    fontFamily: FontFamily.regular,
+    color: Colors.text.subtle,
+    flexShrink: 1,
   },
 });

@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { FontFamily, Spacing, Typography } from '../constants/styles';
+import { FontFamily, Typography } from '../constants/styles';
 
 type ExtractionMethod = 'chunk_paragraph' | 'chunk_header' | 'ai' | 'full';
 
@@ -27,8 +27,8 @@ export function ExtractionMethodPill({ method }: ExtractionMethodPillProps) {
 
 const styles = StyleSheet.create({
   pill: {
-    paddingHorizontal: Spacing['2.5'],
-    paddingVertical: Spacing['1'],
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 12,
     alignSelf: 'flex-start',
   },

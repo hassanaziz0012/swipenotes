@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -10,6 +10,7 @@ import { Colors, FontFamily, Spacing, Typography } from '../constants/styles';
 import { db } from '../db/client';
 import { cards } from '../db/models/card';
 import { sourceNotes } from '../db/models/sourcenote';
+import { cardTags, tags as tagsTable } from '../db/models/tag';
 
 type ExtractionMethod = 'chunk_paragraph' | 'chunk_header' | 'ai' | 'full';
 
@@ -29,15 +30,37 @@ export default function ReviewQueueScreen() {
           createdAt: cards.createdAt,
           lastSeen: cards.lastSeen,
           timesSeen: cards.timesSeen,
+          intervalDays: cards.intervalDays,
           inReviewQueue: cards.inReviewQueue,
           extractionMethod: cards.extractionMethod,
-          tags: cards.tags,
           projectId: cards.projectId,
           sourceNoteTitle: sourceNotes.originalFileName,
         })
         .from(cards)
         .leftJoin(sourceNotes, eq(cards.sourceNoteId, sourceNotes.id))
         .where(eq(cards.inReviewQueue, true));
+
+      // Fetch tags for these cards
+      const cardIds = data.map(c => c.id);
+      let cardTagsMap: Record<number, string[]> = {};
+      
+      if (cardIds.length > 0) {
+        const tagsData = await db
+          .select({
+            cardId: cardTags.cardId,
+            tagName: tagsTable.name
+          })
+          .from(cardTags)
+          .innerJoin(tagsTable, eq(cardTags.tagId, tagsTable.id))
+          .where(inArray(cardTags.cardId, cardIds));
+
+        for (const tag of tagsData) {
+          if (!cardTagsMap[tag.cardId]) {
+            cardTagsMap[tag.cardId] = [];
+          }
+          cardTagsMap[tag.cardId].push(tag.tagName);
+        }
+      }
 
       setCardList(
         data.map((row) => ({
@@ -46,10 +69,11 @@ export default function ReviewQueueScreen() {
           createdAt: row.createdAt,
           lastSeen: row.lastSeen,
           timesSeen: row.timesSeen,
+          intervalDays: row.intervalDays,
           inReviewQueue: row.inReviewQueue,
           extractionMethod: row.extractionMethod as ExtractionMethod,
           sourceNoteTitle: row.sourceNoteTitle || 'Unknown Source',
-          tags: row.tags || [],
+          tags: cardTagsMap[row.id] || [],
           projectId: row.projectId,
         }))
       );
