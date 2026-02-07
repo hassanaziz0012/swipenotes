@@ -43,6 +43,13 @@
       "when": 1769936496474,
       "tag": "0005_past_runaways",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1770485744959,
+      "tag": "0006_slim_the_anarchist",
+      "breakpoints": true
     }
   ]
 }
