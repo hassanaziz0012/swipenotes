@@ -31,10 +31,10 @@ export default function TabLayout() {
                 }}
             />
             <Tabs.Screen
-                name="add"
+                name="content"
                 options={{
-                    title: 'Add',
-                    tabBarIcon: ({ color }) => <Ionicons size={24} name="add-circle" color={color} />,
+                    title: 'Content',
+                    tabBarIcon: ({ color }) => <Ionicons size={24} name="folder" color={color} />,
                 }}
             />
             <Tabs.Screen
