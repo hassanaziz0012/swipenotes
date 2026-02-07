@@ -10,7 +10,7 @@
 
 2. **Manual Card Creation**
    - Simple form: text input (markdown) + optional tags
-   - Max 250 words
+   - Max 150 words
    - No import, no chunking, no AI
 
 3. **Basic Data Storage**

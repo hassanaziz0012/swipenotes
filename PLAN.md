@@ -55,7 +55,7 @@
   source_note_id: string,
   project_id: string,
   
-  content: string, // Markdown, max 250 words
+  content: string, // Markdown, max 150 words
   extra_info: string | null, // User-added markdown notes
   tags: string[], // Lowercase, max 10 tags
   
@@ -209,7 +209,7 @@ function generateDeck(allCards, dailyLimit) {
 ```javascript
 function chunkNote(content, filename) {
   const wordCount = countWords(content);
-  const MAX_WORDS_PER_CARD = 250;
+  const MAX_WORDS_PER_CARD = 150;
   
   // Single card if short enough
   if (wordCount <= MAX_WORDS_PER_CARD) {
