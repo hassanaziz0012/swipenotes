@@ -1,4 +1,4 @@
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { CardCountsByProject, ProjectCardCount } from '../../components/CardCountsByProject';
@@ -18,6 +18,7 @@ import { calculateCurrentStreak, DayStreakData, getWeekStreakData } from '../../
 
 export default function StatisticsScreen() {
   const { user } = useAuth();
+  const router = useRouter();
   const [dailySwipesCount, setDailySwipesCount] = useState(0);
   const [totalCardsCount, setTotalCardsCount] = useState(0);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -34,7 +35,7 @@ export default function StatisticsScreen() {
             const [dailyCount, totalCount, userSessions, streak, weekData, projectsData, reviewCount] = await Promise.all([
               getDailySwipesCount(user.id),
               getTotalCardCount(user.id),
-              getSessions(user.id),
+              getSessions(user.id, 5),
               calculateCurrentStreak(user.id),
               getWeekStreakData(user.id),
               getProjectsWithCardCounts(user.id),
@@ -73,7 +74,7 @@ export default function StatisticsScreen() {
                 const [dailyCount, totalCount, userSessions] = await Promise.all([
                   getDailySwipesCount(user.id),
                   getTotalCardCount(user.id),
-                  getSessions(user.id),
+                  getSessions(user.id, 5),
                 ]);
                 setDailySwipesCount(dailyCount);
                 setTotalCardsCount(totalCount);
@@ -100,23 +101,28 @@ export default function StatisticsScreen() {
       <Divider style={{ marginVertical: 24 }} />
 
       <View style={styles.streakContainer}>
-        <StreakDisplay streakCount={currentStreak} />
-        <WeekStreakIndicator weekData={weekStreakData} />
+        <TouchableOpacity onPress={() => router.push('/streak-details')} activeOpacity={1}>
+          <StreakDisplay streakCount={currentStreak} />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push('/streak-details')} activeOpacity={1}>
+          <WeekStreakIndicator weekData={weekStreakData} />
+        </TouchableOpacity>
       </View>
 
       <SessionList sessions={sessions} />
       {sessions.length > 0 && (
-        <View>
+        <View style={styles.buttonRow}>
+          <TouchableOpacity 
+            onPress={() => router.push('/all-sessions')}
+            style={styles.seeAllButton}
+          >
+            <Text style={styles.seeAllButtonText}>See All Sessions</Text>
+          </TouchableOpacity>
           <TouchableOpacity 
             onPress={handleDeleteAllSessions}
-            style={{ 
-              backgroundColor: '#EF4444', 
-              padding: 10, 
-              borderRadius: 8,
-              alignItems: 'center'
-            }}
+            style={styles.deleteButton}
           >
-            <Text style={{ color: 'white', fontWeight: 'bold' }}>Delete All Sessions</Text>
+            <Text style={styles.deleteButtonText}>Delete All Sessions</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -162,5 +168,32 @@ const styles = StyleSheet.create({
   streakContainer: {
     marginBottom: 8,
     gap: 16,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  seeAllButton: {
+    flex: 1,
+    backgroundColor: Colors.primary.base,
+    padding: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  seeAllButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  deleteButton: {
+    flex: 1,
+    backgroundColor: Colors.status.error,
+    padding: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  deleteButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
   },
 });

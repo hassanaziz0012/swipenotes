@@ -143,3 +143,36 @@ export async function getWeekStreakData(
 
   return weekData;
 }
+
+/**
+ * Gets the streak data for a specific month
+ */
+export async function getMonthStreakData(
+  userId: number,
+  year: number,
+  month: number // 0-indexed (0 = January)
+): Promise<DayStreakData[]> {
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0); // Last day of the month
+
+  const completedSessions = await getCompletedSessionsInRange(
+    userId,
+    firstDay,
+    lastDay
+  );
+
+  const monthData: DayStreakData[] = [];
+  const daysInMonth = lastDay.getDate();
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month, day);
+    monthData.push({
+      date,
+      dayAbbreviation: getDayAbbreviation(date),
+      dayNumber: day,
+      hasStudied: hasCompletedSessionOnDate(completedSessions, date),
+    });
+  }
+
+  return monthData;
+}
