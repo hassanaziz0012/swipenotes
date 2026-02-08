@@ -25,6 +25,12 @@ export const Colors = {
   },
   border: {
       subtle: '#E5E7EB', // cool gray 200
+  },
+  status: {
+      success: '#22C55E', // green 500
+      error: '#EF4444', // red 500
+      warning: '#F59E0B', // amber 500
+      info: '#3B82F6', // blue 500
   }
 } as const;
 
