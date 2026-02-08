@@ -1,5 +1,6 @@
+import { useRouter } from 'expo-router';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors, Spacing, Typography } from '../../constants/styles';
 import { Session } from '../../db/models/session';
 import { SessionItem } from './SessionItem';
@@ -8,7 +9,19 @@ interface SessionListProps {
   sessions: Session[];
 }
 
+
+
 export function SessionList({ sessions }: SessionListProps) {
+  const router = useRouter();
+
+  const handleSessionPress = (session: Session) => {
+    if (session.isActive) {
+      router.push({
+        pathname: "/swipe-session",
+        params: { sessionId: session.id }
+      });
+    }
+  };
   if (sessions.length === 0) {
     return (
       <View style={styles.emptyContainer}>
@@ -21,7 +34,13 @@ export function SessionList({ sessions }: SessionListProps) {
     <View style={styles.container}>
       <Text style={styles.title}>Recent Sessions</Text>
       {sessions.map((session) => (
-        <SessionItem key={session.id} session={session} />
+        <TouchableOpacity 
+          key={session.id} 
+          onPress={() => handleSessionPress(session)}
+          activeOpacity={session.isActive ? 0.7 : 1}
+        >
+          <SessionItem session={session} />
+        </TouchableOpacity>
       ))}
     </View>
   );
