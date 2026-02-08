@@ -1,11 +1,11 @@
+import SessionReview from '@/components/SessionReview';
 import { type Card } from '@/db/models/card';
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated as RNAnimated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { Extrapolation, interpolate, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
-import { CardCountsByProject } from '../components/CardCountsByProject';
-import SessionDetails from '../components/SessionDetails';
 import SwipeCard from '../components/SwipeCard';
 import { Colors, Typography } from '../constants/styles';
 import { useAuth } from '../context/AuthContext';
@@ -180,6 +180,34 @@ export default function SwipeSessionScreen() {
         }
     };
 
+    const handleUndo = async () => {
+        if (swipeHistory.length === 0) return;
+
+        const lastSwipe = swipeHistory[swipeHistory.length - 1];
+        const previousHistory = swipeHistory.slice(0, -1);
+
+        // 1. Remove from history
+        setSwipeHistory(previousHistory);
+
+        // 2. Decrement count
+        setCardsSwipedCount(prev => Math.max(0, prev - 1));
+
+        // 3. Find card and add back to stack
+        const cardToRestore = allSessionCards.find(c => c.id === lastSwipe.cardId);
+        if (cardToRestore) {
+            setCards(prev => [cardToRestore, ...prev]);
+        }
+
+        // 4. Revert review queue status if needed
+        if (lastSwipe.direction === 'right') {
+             try {
+                await setCardInReviewQueue(lastSwipe.cardId, false);
+            } catch (error) {
+                console.error(`Failed to remove card ${lastSwipe.cardId} from review queue:`, error);
+            }
+        }
+    };
+
     const handleEndSession = async () => {
         if (!sessionId || isEndingSession) return;
         setIsEndingSession(true);
@@ -294,6 +322,16 @@ export default function SwipeSessionScreen() {
 
         return (
             <View style={styles.centerContainer}>
+                <View style={styles.header}>
+                     <TouchableOpacity 
+                        style={[styles.undoButton, swipeHistory.length === 0 && styles.undoButtonDisabled]} 
+                        onPress={handleUndo}
+                        disabled={swipeHistory.length === 0}
+                    >
+                        <Ionicons name="arrow-undo" size={24} color={swipeHistory.length === 0 ? Colors.text.subtle : Colors.primary.base} />
+                    </TouchableOpacity>
+                </View>
+
                 <Text style={styles.emptyText}>{limitReached ? "Daily card limit reached" : "Session Complete!"}</Text>
                 <Text style={styles.subText}>{limitReached ? "Come back tomorrow for more!" : "Great job keeping up."}</Text>
                 
@@ -311,17 +349,10 @@ export default function SwipeSessionScreen() {
                 </TouchableOpacity>
                 
                 {displaySession && (
-                    <SessionDetails 
+                    <SessionReview 
                         session={displaySession} 
-                        containerStyle={{ marginTop: 30, width: '100%', maxWidth: 400 }}
-                    />
-                )}
-
-                {projectCounts.length > 0 && (
-                    <CardCountsByProject
                         projectCounts={projectCounts}
-                        title="Cards Studied by Project"
-                        style={{ marginTop: 20, width: '100%', maxWidth: 400 }}
+                        containerStyle={{ marginTop: 30, width: '100%', maxWidth: 400 }}
                     />
                 )}
             </View>
@@ -330,6 +361,16 @@ export default function SwipeSessionScreen() {
 
     return (
         <GestureHandlerRootView style={styles.container}>
+            <View style={styles.header}>
+                 <TouchableOpacity 
+                    style={[styles.undoButton, swipeHistory.length === 0 && styles.undoButtonDisabled]} 
+                    onPress={handleUndo}
+                    disabled={swipeHistory.length === 0}
+                >
+                    <Ionicons name="arrow-undo" size={24} color={swipeHistory.length === 0 ? Colors.text.subtle : Colors.primary.base} />
+                </TouchableOpacity>
+            </View>
+
             {showToast && (
                 <RNAnimated.View style={[styles.toast, { opacity: toastOpacity }]}>
                     <Text style={styles.toastText}>Added to review queue</Text>
@@ -357,7 +398,7 @@ export default function SwipeSessionScreen() {
              {/* Hints Container */}
              <View style={styles.hintsContainer}>
                 <Animated.View style={[styles.hint, styles.leftHint, leftHintStyle]}>
-                    <Text style={styles.hintText}>Skip</Text>
+                    <Text style={styles.hintText}>Next</Text>
                 </Animated.View>
                 <Animated.View style={[styles.hint, styles.rightHint, rightHintStyle]}>
                     <Text style={styles.hintText}>Add to Review</Text>
@@ -376,6 +417,35 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: Colors.background.base,
         paddingTop: 60,
+    },
+    header: {
+        width: '100%',
+        alignItems: 'flex-end',
+        paddingHorizontal: 20,
+        marginBottom: 20,
+        zIndex: 10,
+    },
+    undoButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: Colors.background.card,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+        borderWidth: 1,
+        borderColor: Colors.border.subtle,
+    },
+    undoButtonDisabled: {
+        opacity: 0.4,
+        elevation: 0,
     },
     centerContainer: {
         flex: 1,
@@ -469,12 +539,12 @@ const styles = StyleSheet.create({
         borderWidth: 2,
     },
     leftHint: {
-        borderColor: Colors.status.error || '#EF4444',
-        backgroundColor: (Colors.status.error || '#EF4444') + '20', // 20% opacity
-    },
-    rightHint: {
         borderColor: Colors.status.success || '#22C55E',
         backgroundColor: (Colors.status.success || '#22C55E') + '20', // 20% opacity
+    },
+    rightHint: {
+        borderColor: Colors.primary.base,
+        backgroundColor: 'hsla(15, 63%, 60%, 0.2)', // 20% opacity
     },
     hintText: {
         ...Typography.body,
