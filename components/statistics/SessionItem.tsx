@@ -55,12 +55,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background.card,
     borderRadius: 12,
     marginBottom: Spacing[3],
-    borderWidth: 1,
-    borderColor: Colors.border.subtle,
   },
   activeContainer: {
-    backgroundColor: Colors.primary.light5,
-    borderColor: Colors.primary.light2,
+    backgroundColor: Colors.primary.light6,
   },
   header: {
     flexDirection: 'row',
