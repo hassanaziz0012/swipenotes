@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text } from 'react-native';
 import { Colors, FontFamily, Spacing, Typography } from '../constants/styles';
 
 interface ToastProps {
@@ -76,9 +76,9 @@ export const Toast: React.FC<ToastProps> = ({
         },
       ]}
     >
-      <View style={styles.content}>
+      <Pressable onPress={hideToast} style={styles.content}>
         <Text style={styles.text}>{message}</Text>
-      </View>
+      </Pressable>
     </Animated.View>
   );
 };
