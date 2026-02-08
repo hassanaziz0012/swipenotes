@@ -1,24 +1,54 @@
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import SessionDetails from '../../components/SessionDetails';
 import { Colors, Typography } from '../../constants/styles';
 import { useAuth } from '../../context/AuthContext';
-import { createSession } from '../../db/services';
+import { type Session } from '../../db/models/session';
+import { createSession, getActiveSession } from '../../db/services';
+import { retrieve_eligible_cards } from '../../utils/swipeSession';
 
 export default function StudyScreen() {
     const { user } = useAuth();
     const router = useRouter();
     const [creatingSession, setCreatingSession] = useState(false);
+    const [activeSession, setActiveSession] = useState<Session | null>(null);
+    const [loadingActiveSession, setLoadingActiveSession] = useState(true);
+
+
+    useFocusEffect(
+        useCallback(() => {
+            if (!user) return;
+            
+            async function fetchActiveSession() {
+                try {
+                    const session = await getActiveSession(user!.id);
+                    setActiveSession(session || null);
+                } catch (error) {
+                    console.error("Failed to fetch active session:", error);
+                } finally {
+                    setLoadingActiveSession(false);
+                }
+            }
+
+            fetchActiveSession();
+        }, [user])
+    );
 
     const handleStartSession = async () => {
         if (!user) return;
         
         setCreatingSession(true);
         try {
-            const session = await createSession(user.id);
+            const { cards, limitReached } = await retrieve_eligible_cards(user.id);
+            const session = await createSession(user.id, cards);
+            
             router.push({
                 pathname: "/swipe-session",
-                params: { sessionId: session.id }
+                params: { 
+                    sessionId: session.id,
+                    limitReached: limitReached ? "true" : "false" 
+                }
             });
         } catch (error) {
             console.error("Failed to create session:", error);
@@ -28,26 +58,60 @@ export default function StudyScreen() {
         }
     };
 
+    const handleContinueSession = () => {
+        if (!activeSession) return;
+        
+        router.push({
+            pathname: "/swipe-session",
+            params: { 
+                sessionId: activeSession.id,
+                // Assuming resumption implies cards are already in session or handled by swipe-session logic
+                // If limitReached state needs to be precise, we might need to store it or re-calculate, 
+                // but for continuing, false or existing state is usually fine. 
+                limitReached: "false" 
+            }
+        });
+    };
     return (
         <View style={styles.container}>
             <View style={styles.content}>
                 <Text style={styles.title}>Ready to Study?</Text>
-                <Text style={styles.subtitle}>Start a new session to begin reviewing your cards.</Text>
+                <Text style={styles.subtitle}>
+                    {activeSession 
+                        ? "You have an active session. Would you like to continue?" 
+                        : "Start a new session to begin reviewing your cards."}
+                </Text>
                 
-                <TouchableOpacity 
-                    style={styles.button} 
-                    onPress={handleStartSession}
-                    disabled={creatingSession}
-                >
-                    {creatingSession ? (
-                        <ActivityIndicator color={Colors.background.base} />
-                    ) : (
-                        <Text style={styles.buttonText}>Start New Session</Text>
-                    )}
-                </TouchableOpacity>
+                {loadingActiveSession ? (
+                    <ActivityIndicator color={Colors.primary.base} />
+                ) : activeSession ? (
+                    <View style={styles.sessionContainer}>
+                        <TouchableOpacity 
+                            style={styles.button} 
+                            onPress={handleContinueSession}
+                        >
+                            <Text style={styles.buttonText}>Continue Session</Text>
+                        </TouchableOpacity>
+
+                        <SessionDetails session={activeSession} />
+                    </View>
+                ) : (
+                    <TouchableOpacity 
+                        style={styles.button} 
+                        onPress={handleStartSession}
+                        disabled={creatingSession}
+                    >
+                        {creatingSession ? (
+                            <ActivityIndicator color={Colors.background.base} />
+                        ) : (
+                            <Text style={styles.buttonText}>Start New Session</Text>
+                        )}
+                    </TouchableOpacity>
+                )}
             </View>
         </View>
     );
+
 }
 
 const styles = StyleSheet.create({
@@ -60,6 +124,7 @@ const styles = StyleSheet.create({
     content: {
         alignItems: 'center',
         gap: 20,
+        width: '100%',
     },
     title: {
         ...Typography['3xl'],
@@ -93,5 +158,41 @@ const styles = StyleSheet.create({
         color: Colors.background.base,
         fontWeight: 'bold',
         fontSize: 18,
+    },
+    sessionContainer: {
+        width: '100%',
+        gap: 20,
+    },
+    detailsContainer: {
+        backgroundColor: Colors.background.card,
+        padding: 16,
+        borderRadius: 12,
+        gap: 12,
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: 1,
+        },
+        shadowOpacity: 0.05,
+        shadowRadius: 2.22,
+        elevation: 3,
+        borderWidth: 1,
+        borderColor: Colors.border.subtle,
+    },
+    detailRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    detailLabel: {
+        ...Typography.body,
+        color: Colors.text.subtle,
+        fontSize: 14,
+    },
+    detailValue: {
+        ...Typography.body,
+        color: Colors.text.base,
+        fontWeight: 'bold',
+        fontSize: 14,
     },
 });
