@@ -21,3 +21,5 @@ export const cards = sqliteTable('cards', {
     extractionMethod: text('extraction_method', { enum: ['chunk_paragraph', 'chunk_header', 'ai', 'full'] }).notNull(),
 
 });
+
+export type Card = typeof cards.$inferSelect;

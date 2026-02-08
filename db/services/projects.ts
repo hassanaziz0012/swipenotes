@@ -1,5 +1,6 @@
-import { eq, inArray } from 'drizzle-orm';
+import { count, desc, eq, inArray } from 'drizzle-orm';
 import { db } from '../client';
+import { cards } from '../models/card';
 import { projects, type NewProject, type Project } from '../models/project';
 
 export async function createProject(project: Omit<NewProject, 'id'>): Promise<Project> {
@@ -56,6 +57,28 @@ export async function deleteProjects(projectIds: number[]): Promise<void> {
         await db.delete(projects).where(inArray(projects.id, projectIds));
     } catch (error) {
         console.error('Failed to delete projects:', error);
+        throw error;
+    }
+}
+
+export async function getProjectsWithCardCounts(userId: number): Promise<{ project: Project; count: number }[]> {
+    try {
+        const result = await db.select({
+            project: projects,
+            count: count(cards.id)
+        })
+        .from(projects)
+        .leftJoin(cards, eq(projects.id, cards.projectId))
+        .where(eq(projects.userId, userId))
+        .groupBy(projects.id)
+        .orderBy(desc(count(cards.id)));
+
+        return result.map(row => ({
+            project: row.project,
+            count: row.count
+        }));
+    } catch (error) {
+        console.error('Failed to get projects with card counts:', error);
         throw error;
     }
 }

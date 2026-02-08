@@ -152,3 +152,21 @@ export async function getTotalCardCount(userId: number): Promise<number> {
         throw error;
     }
 }
+
+export async function getCardsInReviewQueueCount(userId: number): Promise<number> {
+    try {
+        const result = await db.select({ count: count() })
+            .from(cards)
+            .where(
+                and(
+                    eq(cards.userId, userId),
+                    eq(cards.inReviewQueue, true)
+                )
+            );
+            
+        return result[0].count;
+    } catch (error) {
+        console.error('Failed to get cards in review queue count:', error);
+        throw error;
+    }
+}
