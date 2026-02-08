@@ -2,6 +2,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import SessionDetails from '../../components/SessionDetails';
+import { Toast } from '../../components/Toast';
 import { Colors, Typography } from '../../constants/styles';
 import { useAuth } from '../../context/AuthContext';
 import { type Session } from '../../db/models/session';
@@ -14,7 +15,8 @@ export default function StudyScreen() {
     const [creatingSession, setCreatingSession] = useState(false);
     const [activeSession, setActiveSession] = useState<Session | null>(null);
     const [loadingActiveSession, setLoadingActiveSession] = useState(true);
-
+    const [toastVisible, setToastVisible] = useState(false);
+    const [toastMessage, setToastMessage] = useState("");   
 
     useFocusEffect(
         useCallback(() => {
@@ -41,6 +43,13 @@ export default function StudyScreen() {
         setCreatingSession(true);
         try {
             const { cards, limitReached } = await retrieve_eligible_cards(user.id);
+            
+            if (cards.length === 0) {
+                setToastMessage("No cards to be reviewed right now");
+                setToastVisible(true);
+                return;
+            }
+
             const session = await createSession(user.id, cards);
             
             router.push({
@@ -109,6 +118,11 @@ export default function StudyScreen() {
                     </TouchableOpacity>
                 )}
             </View>
+            <Toast 
+                visible={toastVisible} 
+                message={toastMessage} 
+                onDismiss={() => setToastVisible(false)}
+            />
         </View>
     );
 
