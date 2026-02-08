@@ -97,14 +97,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     detailLabel: {
-        ...Typography.body,
+        ...Typography.sm,
         color: Colors.text.subtle,
-        fontSize: 14,
     },
     detailValue: {
-        ...Typography.body,
+        ...Typography.sm,
         color: Colors.text.base,
         fontWeight: 'bold',
-        fontSize: 14,
     },
 });

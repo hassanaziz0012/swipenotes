@@ -80,13 +80,12 @@ const styles = StyleSheet.create({
   },
   count: {
     fontFamily: FontFamily.bold,
-    fontSize: Typography['4xl'].fontSize,
+    ...Typography['4xl'],
     color: Colors.text.base,
-    lineHeight: Typography['4xl'].lineHeight,
   },
   subtitle: {
     fontFamily: FontFamily.regular,
-    fontSize: Typography.sm.fontSize,
+    ...Typography.sm,
     color: Colors.text.subtle,
   },
   button: {
@@ -101,7 +100,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontFamily: FontFamily.bold,
-    fontSize: Typography.base.fontSize, // Increased font size
+    ...Typography.base,
     color: Colors.background.base,
   },
   emptyStateContainer: {
@@ -114,7 +113,7 @@ const styles = StyleSheet.create({
   },
   emptyStateText: {
     fontFamily: FontFamily.regular,
-    fontSize: Typography.sm.fontSize,
+    ...Typography.sm,
     color: Colors.primary.dark1,
   },
 });

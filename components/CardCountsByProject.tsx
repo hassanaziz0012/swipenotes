@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: FontFamily.regular,
-    fontSize: Typography.xs.fontSize,
+    ...Typography.xs,
     textTransform: "uppercase",
     letterSpacing: 1,
     fontWeight: "bold",
@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
   },
   projectName: {
     fontFamily: FontFamily.regular,
-    fontSize: Typography.sm.fontSize,
+    ...Typography.sm,
     color: Colors.text.base,
     flex: 1,
   },
@@ -108,6 +108,6 @@ const styles = StyleSheet.create({
   },
   countText: {
     fontFamily: FontFamily.bold,
-    fontSize: Typography.sm.fontSize,
+    ...Typography.sm,
   },
 });

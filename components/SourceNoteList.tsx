@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   sectionTitle: {
-    fontSize: Typography.lg.fontSize,
+    ...Typography.lg,
     fontFamily: FontFamily.bold,
     marginBottom: Spacing['4'],
     color: '#333',
@@ -175,13 +175,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   noteName: {
-    fontSize: Typography.base.fontSize,
+    ...Typography.base,
     fontFamily: FontFamily.bold,
     color: '#333',
     marginBottom: 2,
   },
   noteMeta: {
-    fontSize: Typography.sm.fontSize,
+    ...Typography.sm,
     fontFamily: FontFamily.regular,
     color: '#888',
   },
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#eee',
   },
   modalTitle: {
-    fontSize: Typography.xl.fontSize,
+    ...Typography.xl,
     fontFamily: FontFamily.bold,
     flex: 1,
     marginRight: Spacing['4'],

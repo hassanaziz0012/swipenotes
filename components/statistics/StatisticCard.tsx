@@ -70,14 +70,13 @@ const styles = StyleSheet.create({
   },
   label: {
     fontFamily: FontFamily.regular,
-    fontSize: Typography.sm.fontSize,
+    ...Typography.sm,
     color: Colors.text.subtle,
     marginBottom: 4,
   },
   count: {
     fontFamily: FontFamily.bold,
-    fontSize: Typography['2xl'].fontSize,
+    ...Typography['2xl'],
     color: Colors.text.base,
-    lineHeight: Typography['2xl'].lineHeight,
   },
 });

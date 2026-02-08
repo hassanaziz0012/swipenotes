@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   projectPillText: {
-    fontSize: Typography.xs.fontSize,
+    ...Typography.xs,
     fontFamily: FontFamily.regular,
     color: Colors.text.subtle,
   },
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
     maxWidth: '60%',
   },
   sourcePillText: {
-    fontSize: Typography.xs.fontSize,
+    ...Typography.xs,
     fontFamily: FontFamily.regular,
     color: Colors.text.subtle,
     flexShrink: 1,

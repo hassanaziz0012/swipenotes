@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
   },
   dayLabel: {
     fontFamily: FontFamily.regular,
-    fontSize: Typography.xs.fontSize,
+    ...Typography.xs,
     color: Colors.text.subtle,
   },
   todayLabel: {
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
   },
   dateNumber: {
     fontFamily: FontFamily.regular,
-    fontSize: Typography.sm.fontSize,
+    ...Typography.sm,
     color: Colors.text.subtle,
   },
 });

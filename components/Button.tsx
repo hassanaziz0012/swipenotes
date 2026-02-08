@@ -1,10 +1,10 @@
 import React from 'react';
 import {
-    ActivityIndicator,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    TouchableOpacityProps,
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  TouchableOpacityProps,
 } from 'react-native';
 import { Colors, FontFamily, Spacing, Typography } from '../constants/styles';
 
@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontFamily: FontFamily.bold,
-    fontSize: Typography.base.fontSize,
+    ...Typography.base,
     textAlign: 'center',
   },
 });

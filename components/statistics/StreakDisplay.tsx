@@ -55,19 +55,18 @@ const styles = StyleSheet.create({
   },
   streakCount: {
     fontFamily: FontFamily.bold,
-    fontSize: Typography['5xl'].fontSize,
-    lineHeight: Typography['5xl'].lineHeight,
+    ...Typography['5xl'],
     color: Colors.text.base,
   },
   streakLabel: {
     fontFamily: FontFamily.bold,
-    fontSize: Typography.lg.fontSize,
+    ...Typography.lg,
     color: Colors.text.base,
     marginTop: Spacing['1'],
   },
   motivationalText: {
     fontFamily: FontFamily.regular,
-    fontSize: Typography.sm.fontSize,
+    ...Typography.sm,
     color: Colors.text.subtle,
     marginTop: Spacing['1'],
   },
