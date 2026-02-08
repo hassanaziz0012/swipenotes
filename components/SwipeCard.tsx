@@ -8,7 +8,8 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
-  withTiming
+  withTiming,
+  type SharedValue
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import { Colors, FontFamily, Typography } from '../constants/styles';
@@ -32,9 +33,10 @@ interface SwipeCardProps {
   index: number; // 0 is top card
   project?: Project;
   sourceNoteTitle?: string;
+  activeTranslationX?: SharedValue<number>;
 }
 
-export default function SwipeCard({ card, onSwipeLeft, onSwipeRight, index, project, sourceNoteTitle }: SwipeCardProps) {
+export default function SwipeCard({ card, onSwipeLeft, onSwipeRight, index, project, sourceNoteTitle, activeTranslationX }: SwipeCardProps) {
   const translationX = useSharedValue(0);
   const translationY = useSharedValue(0);
   const rotation = useSharedValue(0);
@@ -47,6 +49,11 @@ export default function SwipeCard({ card, onSwipeLeft, onSwipeRight, index, proj
     .onUpdate((event) => {
       translationX.value = event.translationX;
       translationY.value = event.translationY;
+      
+      if (activeTranslationX) {
+        activeTranslationX.value = event.translationX;
+      }
+
       rotation.value = interpolate(
         event.translationX,
         [-SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2],
@@ -70,6 +77,10 @@ export default function SwipeCard({ card, onSwipeLeft, onSwipeRight, index, proj
             translationX.value = withSpring(0);
             translationY.value = withSpring(0);
             rotation.value = withSpring(0);
+        }
+        
+        if (activeTranslationX) {
+            activeTranslationX.value = withSpring(0);
         }
     });
 
