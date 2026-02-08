@@ -52,7 +52,7 @@ export default function ProjectsScreen() {
                     headerTitleAlign: 'center',
                     headerStyle: { backgroundColor: Colors.background.card },
                     headerTintColor: Colors.text.base,
-                    headerTitleStyle: { fontFamily: FontFamily.regular },
+                    headerTitleStyle: { fontFamily: FontFamily.regular, ...Typography.base, fontWeight: 'bold' },
                     headerLeft: () => (
                         <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
                             <Ionicons name="arrow-back" size={24} color={Colors.text.base} />
@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
         marginRight: Spacing['3'],
     },
     projectName: {
-        fontSize: Typography.base.fontSize,
+        ...Typography.base,
         fontFamily: FontFamily.regular,
         color: Colors.text.base,
     },
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
         padding: Spacing['6'],
     },
     title: {
-        fontSize: Typography['2xl'].fontSize,
+        ...Typography['2xl'],
         fontFamily: FontFamily.bold,
         color: Colors.text.base,
         marginTop: Spacing['4'],

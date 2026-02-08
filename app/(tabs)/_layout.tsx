@@ -41,6 +41,7 @@ export default function TabLayout() {
                 name="study"
                 options={{
                     title: '',
+                    headerShown: false,
                     tabBarButton: (props) => (
                         <StudyButton 
                             onPress={props.onPress as () => void} 
