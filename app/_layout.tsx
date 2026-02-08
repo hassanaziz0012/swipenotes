@@ -1,5 +1,5 @@
-import { Inter_400Regular, Inter_700Bold, useFonts } from '@expo-google-fonts/inter';
 import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
+import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
@@ -16,8 +16,8 @@ function RootLayoutNav() {
   const router = useRouter();
 
   const [fontsLoaded, fontError] = useFonts({
-    Inter_400Regular,
-    Inter_700Bold,
+    'GoogleSans-Regular': require('../assets/fonts/Google_Sans/static/GoogleSans-Regular.ttf'),
+    'GoogleSans-Bold': require('../assets/fonts/Google_Sans/static/GoogleSans-Bold.ttf'),
   });
 
   const { success: migrationSuccess, error: migrationError } = useMigrations(db, migrations);

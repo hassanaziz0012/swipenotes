@@ -35,71 +35,86 @@ export const Colors = {
 } as const;
 
 export const FontFamily = {
-  regular: 'Inter_400Regular',
-  bold: 'Inter_700Bold',
+  regular: 'GoogleSans-Regular',
+  bold: 'GoogleSans-Bold',
 } as const;
 
 export const Typography = {
   xs: {
     fontSize: 12,
-    lineHeight: 16,
+    lineHeight: 14,
+    includeFontPadding: false,
   },
   sm: {
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 18,
+    includeFontPadding: false,
   },
   base: {
     fontSize: 16,
-    lineHeight: 24,
+    lineHeight: 20,
+    includeFontPadding: false,
   },
   lg: {
     fontSize: 18,
-    lineHeight: 28,
+    lineHeight: 22,
+    includeFontPadding: false,
   },
   xl: {
     fontSize: 20,
-    lineHeight: 28,
+    lineHeight: 24,
+    includeFontPadding: false,
   },
   '2xl': {
     fontSize: 24,
-    lineHeight: 32,
+    lineHeight: 28,
+    includeFontPadding: false,
   },
   '3xl': {
     fontSize: 30,
-    lineHeight: 36,
+    lineHeight: 34,
+    includeFontPadding: false,
   },
   '4xl': {
     fontSize: 36,
-    lineHeight: 40,
+    lineHeight: 38,
+    includeFontPadding: false,
   },
   '5xl': {
     fontSize: 48,
     lineHeight: 48,
+    includeFontPadding: false,
   },
   '6xl': {
     fontSize: 60,
     lineHeight: 60,
+    includeFontPadding: false,
   },
   '7xl': {
     fontSize: 72,
     lineHeight: 72,
+    includeFontPadding: false,
   },
   '8xl': {
     fontSize: 96,
     lineHeight: 96,
+    includeFontPadding: false,
   },
   '9xl': {
     fontSize: 128,
     lineHeight: 128,
+    includeFontPadding: false,
   },
   // Aliases
   body: {
     fontSize: 16,
-    lineHeight: 24,
+    lineHeight: 20,
+    includeFontPadding: false,
   },
   caption: {
     fontSize: 12,
-    lineHeight: 16,
+    lineHeight: 14,
+    includeFontPadding: false,
   },
 } as const;
 
