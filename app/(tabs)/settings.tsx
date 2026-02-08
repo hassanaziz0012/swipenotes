@@ -3,14 +3,14 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  View,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    View,
 } from 'react-native';
 import { Colors, FontFamily, Spacing, Typography } from '../../constants/styles';
 import { useAuth } from '../../context/AuthContext';
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
         marginBottom: Spacing['6'],
     },
     sectionTitle: {
-        fontSize: Typography.xs.fontSize,
+        ...Typography.xs,
         fontFamily: FontFamily.regular,
         color: Colors.text.subtle,
         textTransform: 'uppercase',
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingVertical: Spacing['4'],
+        paddingVertical: Spacing['3'],
     },
     settingLeft: {
         flexDirection: 'row',
@@ -256,12 +256,12 @@ const styles = StyleSheet.create({
         gap: Spacing['3'],
     },
     settingLabel: {
-        fontSize: Typography.base.fontSize,
+        ...Typography.sm,
         fontFamily: FontFamily.regular,
         color: Colors.text.base,
     },
     settingValue: {
-        fontSize: Typography.sm.fontSize,
+        ...Typography.sm,
         fontFamily: FontFamily.regular,
         color: Colors.text.subtle,
     },
@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         paddingHorizontal: Spacing['3'],
         paddingVertical: Spacing['2'],
-        fontSize: Typography.base.fontSize,
+        ...Typography.sm,
         fontFamily: FontFamily.regular,
         color: Colors.text.base,
         textAlign: 'center',
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
         elevation: 1,
     },
     themeOptionText: {
-        fontSize: Typography.sm.fontSize,
+        ...Typography.sm,
         fontFamily: FontFamily.regular,
         color: Colors.text.subtle,
     },
