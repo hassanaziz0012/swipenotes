@@ -1,9 +1,10 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { DueCardsCalendar } from '../../components/DueCardsCalendar';
 import SessionDetails from '../../components/SessionDetails';
 import { Toast } from '../../components/Toast';
-import { Colors, Typography } from '../../constants/styles';
+import { Colors, Spacing, Typography } from '../../constants/styles';
 import { useAuth } from '../../context/AuthContext';
 import { type Session } from '../../db/models/session';
 import { createSession, getActiveSession } from '../../db/services';
@@ -83,41 +84,50 @@ export default function StudyScreen() {
     };
     return (
         <View style={styles.container}>
-            <View style={styles.content}>
-                <Text style={styles.title}>Ready to Study?</Text>
-                <Text style={styles.subtitle}>
-                    {activeSession 
-                        ? "You have an active session. Would you like to continue?" 
-                        : "Start a new session to begin reviewing your cards."}
-                </Text>
-                
-                {loadingActiveSession ? (
-                    <ActivityIndicator color={Colors.primary.base} />
-                ) : activeSession ? (
-                    <View style={styles.sessionContainer}>
+            <ScrollView contentContainerStyle={styles.scrollContent}>
+                <View style={styles.content}>
+                    <Text style={styles.title}>Ready to Study?</Text>
+                    <Text style={styles.subtitle}>
+                        {activeSession 
+                            ? "You have an active session. Would you like to continue?" 
+                            : "Start a new session to begin reviewing your cards."}
+                    </Text>
+                    
+                    {loadingActiveSession ? (
+                        <ActivityIndicator color={Colors.primary.base} />
+                    ) : activeSession ? (
+                        <View style={styles.sessionContainer}>
+                            <TouchableOpacity 
+                                style={styles.button} 
+                                onPress={handleContinueSession}
+                            >
+                                <Text style={styles.buttonText}>Continue Session</Text>
+                            </TouchableOpacity>
+
+                            <SessionDetails session={activeSession} />
+                        </View>
+                    ) : (
                         <TouchableOpacity 
                             style={styles.button} 
-                            onPress={handleContinueSession}
+                            onPress={handleStartSession}
+                            disabled={creatingSession}
                         >
-                            <Text style={styles.buttonText}>Continue Session</Text>
+                            {creatingSession ? (
+                                <ActivityIndicator color={Colors.background.base} />
+                            ) : (
+                                <Text style={styles.buttonText}>Start New Session</Text>
+                            )}
                         </TouchableOpacity>
+                    )}
+                </View>
 
-                        <SessionDetails session={activeSession} />
+                {/* Due Cards Calendar */}
+                {user && (
+                    <View style={styles.calendarSection}>
+                        <DueCardsCalendar userId={user.id} />
                     </View>
-                ) : (
-                    <TouchableOpacity 
-                        style={styles.button} 
-                        onPress={handleStartSession}
-                        disabled={creatingSession}
-                    >
-                        {creatingSession ? (
-                            <ActivityIndicator color={Colors.background.base} />
-                        ) : (
-                            <Text style={styles.buttonText}>Start New Session</Text>
-                        )}
-                    </TouchableOpacity>
                 )}
-            </View>
+            </ScrollView>
             <Toast 
                 visible={toastVisible} 
                 message={toastMessage} 
@@ -132,12 +142,19 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: Colors.background.base,
+    },
+    scrollContent: {
+        flexGrow: 1,
         justifyContent: 'center',
         padding: 20,
     },
     content: {
         alignItems: 'center',
         gap: 20,
+        width: '100%',
+    },
+    calendarSection: {
+        marginTop: Spacing['8'],
         width: '100%',
     },
     title: {

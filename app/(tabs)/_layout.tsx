@@ -27,6 +27,7 @@ export default function TabLayout() {
                 name="index"
                 options={{
                     title: 'Home',
+                    headerShown: false,
                     tabBarIcon: ({ color }) => <Ionicons size={24} name="home" color={color} />,
                 }}
             />
@@ -34,6 +35,7 @@ export default function TabLayout() {
                 name="content"
                 options={{
                     title: 'Content',
+                    headerShown: false,
                     tabBarIcon: ({ color }) => <Ionicons size={24} name="folder" color={color} />,
                 }}
             />
@@ -53,6 +55,7 @@ export default function TabLayout() {
                 name="statistics"
                 options={{
                     title: 'Statistics',
+                    headerShown: false,
                     tabBarIcon: ({ color }) => <Ionicons size={24} name="stats-chart" color={color} />,
                 }}
             />
@@ -60,6 +63,7 @@ export default function TabLayout() {
                 name="settings"
                 options={{
                     title: 'Settings',
+                    headerShown: false,
                     tabBarIcon: ({ color }) => <Ionicons size={24} name="settings" color={color} />,
                 }}
             />

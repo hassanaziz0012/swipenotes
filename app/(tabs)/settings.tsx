@@ -12,6 +12,7 @@ import {
     TextInput,
     View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, FontFamily, Spacing, Typography } from '../../constants/styles';
 import { useAuth } from '../../context/AuthContext';
 import { updateUserSettings } from '../../db/services';
@@ -85,6 +86,7 @@ export default function SettingsScreen() {
     };
 
     return (
+        <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background.base }}>
         <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
             {/* Preferences Section */}
             <View style={styles.section}>
@@ -210,6 +212,7 @@ export default function SettingsScreen() {
                 </View>
             </View>
         </ScrollView>
+        </SafeAreaView>
     );
 }
 

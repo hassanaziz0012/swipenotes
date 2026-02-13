@@ -13,6 +13,46 @@ import { type Project } from '../db/models/project';
 import { type Session } from '../db/models/session';
 import { getProjectById, getSessionById, getSourceNoteById, setCardInReviewQueue, updateCard, updateSession } from '../db/services';
 
+// Spaced repetition intervals (in days), capping at 90
+const INTERVALS = [1, 3, 7, 14, 30, 60, 90];
+const RANDOMNESS_FACTOR = 0.2; // ±20%
+
+/**
+ * Calculate the next interval for a card based on its current intervalDays and swipe direction.
+ * - Left swipe: progress to next interval with ±20% randomness
+ * - Right swipe: add to review queue, don't change interval
+ */
+function calculateNextInterval(card: { intervalDays: number }, direction: 'left' | 'right'): { intervalDays: number; actualInterval: number } | null {
+    if (direction === 'right') {
+        // Right swipe = review queue, no interval change
+        return null;
+    }
+
+    // Left swipe = card learned, progress to next interval
+    const currentIndex = INTERVALS.indexOf(card.intervalDays);
+    let nextIndex: number;
+
+    if (currentIndex === -1) {
+        // Card has never been seen (intervalDays = 0 or 1) or has a non-standard interval
+        // Start at the first interval (3 days)
+        nextIndex = 0;
+    } else {
+        // Progress to next interval, capping at the last one (90 days)
+        nextIndex = Math.min(currentIndex + 1, INTERVALS.length - 1);
+    }
+
+    const baseInterval = INTERVALS[nextIndex];
+
+    // Add randomness: ±20%
+    const randomOffset = baseInterval * RANDOMNESS_FACTOR;
+    const actualInterval = baseInterval + (Math.random() * randomOffset * 2 - randomOffset);
+
+    return {
+        intervalDays: INTERVALS[nextIndex], // Store the base interval for progression tracking
+        actualInterval: Math.round(actualInterval), // The actual days to add (with randomness)
+    };
+}
+
 export default function SwipeSessionScreen() {
     const { user } = useAuth();
     const router = useRouter();
@@ -213,13 +253,13 @@ export default function SwipeSessionScreen() {
         setIsEndingSession(true);
 
         try {
-            // 1. Update all cards based on swipe history
-            // We'll iterate through all cards in the session and apply updates if they were swiped
+            // 1. Build update map for all swiped cards
             const cardUpdates = new Map<number, {
                 timesSeen: number,
                 timesLeftSwiped: number,
                 timesRightSwiped: number,
-                lastSeen: Date
+                lastSeen: Date,
+                intervalDays: number,
             }>();
 
             // Initialize with current values from allSessionCards
@@ -228,12 +268,12 @@ export default function SwipeSessionScreen() {
                     timesSeen: card.timesSeen || 0,
                     timesLeftSwiped: card.timesLeftSwiped || 0,
                     timesRightSwiped: card.timesRightSwiped || 0,
-                    lastSeen: new Date(card.lastSeen) // keep original lastSeen initially
+                    lastSeen: card.lastSeen ? new Date(card.lastSeen) : new Date(),
+                    intervalDays: card.intervalDays || 0,
                 });
             });
 
-            // Apply updates from history
-            // Use a specific timestamp for this batch update for consistency
+            // Apply updates from swipe history
             const now = new Date();
 
             swipeHistory.forEach(swipe => {
@@ -244,15 +284,25 @@ export default function SwipeSessionScreen() {
                     
                     if (swipe.direction === 'left') {
                         current.timesLeftSwiped += 1;
+
+                        // Calculate next spaced repetition interval
+                        const intervalResult = calculateNextInterval(
+                            { intervalDays: current.intervalDays },
+                            'left'
+                        );
+                        if (intervalResult) {
+                            current.intervalDays = intervalResult.intervalDays;
+                        }
                     } else {
                         current.timesRightSwiped += 1;
+                        // Right swipe = review queue, interval stays the same
                     }
+
                     cardUpdates.set(swipe.cardId, current);
                 }
             });
 
-            // Perform DB updates
-            // Filter to only cards that were actually swiped
+            // 2. Perform DB updates (only for cards that were actually swiped)
             const swipedCardIds = new Set(swipeHistory.map(h => h.cardId));
             
             const updatePromises = Array.from(swipedCardIds).map(cardId => {
@@ -265,18 +315,17 @@ export default function SwipeSessionScreen() {
 
             await Promise.all(updatePromises);
 
-            // 2. Mark session as ended
+            // 3. Mark session as ended
             await updateSession(Number(sessionId), {
                 isActive: false,
                 endedAt: new Date()
             });
 
-            // 3. Navigate back
+            // 4. Navigate back
             router.back();
 
         } catch (error) {
             console.error("Failed to end session:", error);
-            // Optionally show error to user
         } finally {
             setIsEndingSession(false);
         }

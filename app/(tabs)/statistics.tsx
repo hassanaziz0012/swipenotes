@@ -1,6 +1,7 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { CardCountsByProject, ProjectCardCount } from '../../components/CardCountsByProject';
 import { Divider } from '../../components/Divider';
 import { DailySwipesCountCard } from '../../components/statistics/DailySwipesCountCard';
@@ -87,6 +88,7 @@ export default function StatisticsScreen() {
   };
 
   return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background.base }}>
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <View style={styles.cardsContainer}>
         <DailySwipesCountCard count={dailySwipesCount} />
@@ -141,6 +143,7 @@ export default function StatisticsScreen() {
         style={{ marginBottom: 32 }}
       />
     </ScrollView>
+    </SafeAreaView>
   );
 }
 
