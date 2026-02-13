@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, between, desc, eq } from "drizzle-orm";
 import { db } from "../client";
 import { type Card } from "../models/card";
 import { sessions, type NewSession } from "../models/session";
@@ -67,4 +67,25 @@ export async function getActiveSession(userId: number) {
         .limit(1);
     
     return result[0];
+}
+
+export async function getSessionsByDate(userId: number, date: Date) {
+    // Create start and end of the day
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const result = await db.select()
+        .from(sessions)
+        .where(
+            and(
+                eq(sessions.userId, userId),
+                between(sessions.startedAt, startOfDay, endOfDay)
+            )
+        )
+        .orderBy(desc(sessions.startedAt));
+    
+    return result;
 }

@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { db } from '../client';
 import { cards } from '../models/card';
 import { sourceNotes } from '../models/sourcenote';
@@ -18,6 +18,19 @@ export async function getSourceNoteById(sourceNoteId: number) {
         return result[0];
     } catch (error) {
         console.error('Failed to get source note by id:', error);
+        throw error;
+    }
+}
+
+export async function getRecentSourceNotes(limit: number = 5) {
+    try {
+        return await db
+            .select()
+            .from(sourceNotes)
+            .orderBy(desc(sourceNotes.importDate))
+            .limit(limit);
+    } catch (error) {
+        console.error('Failed to get recent source notes:', error);
         throw error;
     }
 }
