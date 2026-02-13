@@ -1,9 +1,10 @@
 import { MAX_TAGS } from '@/utils/tagsCleanup';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useRef, useState } from 'react';
-import { Animated, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Animated, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Colors, FontFamily, Spacing, Typography } from '../constants/styles';
 import { type Project } from '../db/models/project';
+import { ContentModal } from './ContentModal';
 import { ExtractionMethodPill } from './ExtractionMethodPill';
 import { TextMarkdownDisplay } from './TextMarkdownDisplay';
 
@@ -338,206 +339,169 @@ export function CardListItem({
       </Pressable>
 
       {/* Card Edit/View Modal */}
-      <Modal
+      <ContentModal
         visible={isModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={handleCloseModal}
-      >
-        <View style={styles.modalOverlay}>
-          <TouchableOpacity 
-            style={styles.modalBackdrop} 
-            activeOpacity={1} 
-            onPress={handleCloseModal}
-          />
-          <KeyboardAvoidingView 
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.modalContentWrapper}
+        onClose={handleCloseModal}
+        title={isEditMode ? 'Edit Card' : 'View Card'}
+        headerRight={
+          <Pressable 
+            onPress={isEditMode ? handleSaveContent : handleSwitchToEditMode} 
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            disabled={isSaving}
           >
-            <View style={styles.modalContent}>
-              <ScrollView
-                keyboardShouldPersistTaps="always"
-                contentContainerStyle={styles.modalInnerContent}
-                bounces={false}
-              >
-                {/* Modal Header */}
-                <View style={styles.modalHeader}>
-                  <Pressable 
-                    onPress={handleCloseModal} 
-                    style={styles.modalHeaderButton}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <Ionicons name="close" size={24} color={Colors.text.base} />
-                  </Pressable>
-                  <Text style={styles.modalTitle}>
-                    {isEditMode ? 'Edit Card' : 'View Card'}
+            {isEditMode ? (
+              isSaving ? (
+                <Ionicons name="hourglass-outline" size={24} color={Colors.text.subtle} />
+              ) : (
+                <Ionicons name="checkmark" size={24} color={Colors.primary.base} />
+              )
+            ) : (
+              <Ionicons name="pencil" size={24} color={Colors.primary.base} />
+            )}
+          </Pressable>
+        }
+      >
+        {isEditMode ? (
+          <View style={styles.editOptionsContainer}>
+            {/* Project Selector */}
+            <View style={styles.optionRow}>
+              <Text style={styles.optionLabel}>Project:</Text>
+              <View style={styles.projectSelectorContainer}>
+                <TouchableOpacity 
+                  style={styles.projectSelector}
+                  onPress={() => setShowProjectPicker(!showProjectPicker)}
+                >
+                  <Text style={[
+                    styles.projectSelectorText, 
+                    !editedProjectId && { color: Colors.text.subtle }
+                  ]}>
+                    {getProjectName(editedProjectId)}
                   </Text>
-                  <Pressable 
-                    onPress={isEditMode ? handleSaveContent : handleSwitchToEditMode} 
-                    style={styles.modalHeaderButton}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    disabled={isSaving}
-                  >
-                    {isEditMode ? (
-                      isSaving ? (
-                        <Ionicons name="hourglass-outline" size={24} color={Colors.text.subtle} />
-                      ) : (
-                        <Ionicons name="checkmark" size={24} color={Colors.primary.base} />
-                      )
-                    ) : (
-                      <Ionicons name="pencil" size={24} color={Colors.primary.base} />
-                    )}
-                  </Pressable>
-                </View>
-
-                {/* Modal Body */}
-                <View style={styles.modalBody}>
-                  {isEditMode ? (
-                    <View style={styles.editOptionsContainer}>
-                      {/* Project Selector */}
-                      <View style={styles.optionRow}>
-                        <Text style={styles.optionLabel}>Project:</Text>
-                        <View style={styles.projectSelectorContainer}>
-                          <TouchableOpacity 
-                            style={styles.projectSelector}
-                            onPress={() => setShowProjectPicker(!showProjectPicker)}
-                          >
-                            <Text style={[
-                              styles.projectSelectorText, 
-                              !editedProjectId && { color: Colors.text.subtle }
-                            ]}>
-                              {getProjectName(editedProjectId)}
-                            </Text>
-                            <Ionicons name="chevron-down" size={16} color={Colors.text.subtle} />
-                          </TouchableOpacity>
-                          
-                          {showProjectPicker && (
-                            <View style={styles.projectPickerDropdown}>
-                              <ScrollView style={styles.projectPickerScroll} nestedScrollEnabled>
-                                <TouchableOpacity 
-                                  style={styles.projectPickerItem}
-                                  onPress={() => {
-                                    setEditedProjectId(null);
-                                    setShowProjectPicker(false);
-                                  }}
-                                >
-                                  <Text style={styles.projectPickerItemText}>No Project</Text>
-                                  {editedProjectId === null && <Ionicons name="checkmark" size={16} color={Colors.primary.base} />}
-                                </TouchableOpacity>
-                                {availableProjects.map(project => (
-                                  <TouchableOpacity 
-                                    key={project.id}
-                                    style={styles.projectPickerItem}
-                                    onPress={() => {
-                                      setEditedProjectId(project.id);
-                                      setShowProjectPicker(false);
-                                    }}
-                                  >
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: project.color }} />
-                                      <Text style={styles.projectPickerItemText}>{project.name}</Text>
-                                    </View>
-                                    {editedProjectId === project.id && <Ionicons name="checkmark" size={16} color={Colors.primary.base} />}
-                                  </TouchableOpacity>
-                                ))}
-                              </ScrollView>
-                            </View>
-                          )}
-                        </View>
-                      </View>
-
-
-
-                      {/* Review Queue Toggle */}
-                      <View style={styles.optionRow}>
-                        <Text style={styles.optionLabel}>Review Queue:</Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                          <Switch
-                            value={editedInReviewQueue}
-                            onValueChange={setEditedInReviewQueue}
-                            trackColor={{ false: Colors.border.subtle, true: Colors.primary.light6 }}
-                            thumbColor={editedInReviewQueue ? Colors.primary.base : '#f4f3f4'}
-                          />
-                          <Text style={{ marginLeft: 8, color: Colors.text.subtle, fontSize: Typography.sm.fontSize }}>
-                            {editedInReviewQueue ? 'In Review Queue' : 'Not in Review Queue'}
-                          </Text>
-                        </View>
-                      </View>
-
-                      <View style={styles.divider} />
-                      
-                      <Text style={[styles.optionLabel, { marginBottom: 8 }]}>Content:</Text>
-                      <TextInput
-                        style={styles.textInput}
-                        value={editedContent}
-                        onChangeText={setEditedContent}
-                        multiline
-                        placeholder="Enter card content..."
-                        placeholderTextColor={Colors.text.subtle}
-                        textAlignVertical="top"
-                        blurOnSubmit={false}
-                      />
-
-                      <View style={styles.divider} />
-
-                      {/* Tags Editor - Moved to end */}
-                      <View style={styles.optionRow}>
-                        <Text style={styles.optionLabel}>Tags (max: {MAX_TAGS}):</Text>
-                        <View style={[
-                          styles.tagsContainer, 
-                          !showAllTags && styles.tagsContainerCollapsed
-                        ]}>
-                          {(() => {
-                            const tagsToShow = showAllTags ? availableTags : availableTags;
-                            return tagsToShow.map(tag => {
-                              const isSelected = editedTags.includes(tag);
-                              const isDisabled = !isSelected && editedTags.length >= MAX_TAGS;
-                              return (
-                                <TouchableOpacity
-                                  key={tag}
-                                  style={[
-                                    styles.tagChip, 
-                                    isSelected && styles.tagChipSelected,
-                                    isDisabled && styles.tagChipDisabled
-                                  ]}
-                                  onPress={() => toggleEditedTag(tag)}
-                                  disabled={isDisabled}
-                                >
-                                  <Text style={[
-                                    styles.tagText, 
-                                    isSelected && styles.tagTextSelected,
-                                    isDisabled && styles.tagTextDisabled
-                                  ]}>
-                                    {tag.replace(/([a-z])([A-Z])/g, '$1 $2')}
-                                  </Text>
-                                </TouchableOpacity>
-                              );
-                            });
-                          })()}
-                        </View>
-                        {!showAllTags && availableTags.length > 15 && (
-                          <TouchableOpacity onPress={() => setShowAllTags(true)} style={styles.showMoreButton}>
-                            <Text style={styles.showMoreText}>Show more</Text>
-                          </TouchableOpacity>
-                        )}
-                        {showAllTags && availableTags.length > 15 && (
-                          <TouchableOpacity onPress={() => setShowAllTags(false)} style={styles.showMoreButton}>
-                            <Text style={styles.showMoreText}>Show less</Text>
-                          </TouchableOpacity>
-                        )}
-                      </View>
-                    </View>
-                  ) : (
-                    <Pressable onPress={handleSwitchToEditMode}>
-                      <TextMarkdownDisplay>{editedContent}</TextMarkdownDisplay>
-                    </Pressable>
-                  )}
-                </View>
-              </ScrollView>
+                  <Ionicons name="chevron-down" size={16} color={Colors.text.subtle} />
+                </TouchableOpacity>
+                
+                {showProjectPicker && (
+                  <View style={styles.projectPickerDropdown}>
+                    <ScrollView style={styles.projectPickerScroll} nestedScrollEnabled>
+                      <TouchableOpacity 
+                        style={styles.projectPickerItem}
+                        onPress={() => {
+                          setEditedProjectId(null);
+                          setShowProjectPicker(false);
+                        }}
+                      >
+                        <Text style={styles.projectPickerItemText}>No Project</Text>
+                        {editedProjectId === null && <Ionicons name="checkmark" size={16} color={Colors.primary.base} />}
+                      </TouchableOpacity>
+                      {availableProjects.map(project => (
+                        <TouchableOpacity 
+                          key={project.id}
+                          style={styles.projectPickerItem}
+                          onPress={() => {
+                            setEditedProjectId(project.id);
+                            setShowProjectPicker(false);
+                          }}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: project.color }} />
+                            <Text style={styles.projectPickerItemText}>{project.name}</Text>
+                          </View>
+                          {editedProjectId === project.id && <Ionicons name="checkmark" size={16} color={Colors.primary.base} />}
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+              </View>
             </View>
-          </KeyboardAvoidingView>
-        </View>
-      </Modal>
+
+
+
+            {/* Review Queue Toggle */}
+            <View style={styles.optionRow}>
+              <Text style={styles.optionLabel}>Review Queue:</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                <Switch
+                  value={editedInReviewQueue}
+                  onValueChange={setEditedInReviewQueue}
+                  trackColor={{ false: Colors.border.subtle, true: Colors.primary.light6 }}
+                  thumbColor={editedInReviewQueue ? Colors.primary.base : '#f4f3f4'}
+                />
+                <Text style={{ marginLeft: 8, color: Colors.text.subtle, fontSize: Typography.sm.fontSize }}>
+                  {editedInReviewQueue ? 'In Review Queue' : 'Not in Review Queue'}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.divider} />
+            
+            <Text style={[styles.optionLabel, { marginBottom: 8 }]}>Content:</Text>
+            <TextInput
+              style={styles.textInput}
+              value={editedContent}
+              onChangeText={setEditedContent}
+              multiline
+              placeholder="Enter card content..."
+              placeholderTextColor={Colors.text.subtle}
+              textAlignVertical="top"
+              blurOnSubmit={false}
+            />
+
+            <View style={styles.divider} />
+
+            {/* Tags Editor - Moved to end */}
+            <View style={styles.optionRow}>
+              <Text style={styles.optionLabel}>Tags (max: {MAX_TAGS}):</Text>
+              <View style={[
+                styles.tagsContainer, 
+                !showAllTags && styles.tagsContainerCollapsed
+              ]}>
+                {(() => {
+                  const tagsToShow = showAllTags ? availableTags : availableTags;
+                  return tagsToShow.map(tag => {
+                    const isSelected = editedTags.includes(tag);
+                    const isDisabled = !isSelected && editedTags.length >= MAX_TAGS;
+                    return (
+                      <TouchableOpacity
+                        key={tag}
+                        style={[
+                          styles.tagChip, 
+                          isSelected && styles.tagChipSelected,
+                          isDisabled && styles.tagChipDisabled
+                        ]}
+                        onPress={() => toggleEditedTag(tag)}
+                        disabled={isDisabled}
+                      >
+                        <Text style={[
+                          styles.tagText, 
+                          isSelected && styles.tagTextSelected,
+                          isDisabled && styles.tagTextDisabled
+                        ]}>
+                          {tag.replace(/([a-z])([A-Z])/g, '$1 $2')}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  });
+                })()}
+              </View>
+              {!showAllTags && availableTags.length > 15 && (
+                <TouchableOpacity onPress={() => setShowAllTags(true)} style={styles.showMoreButton}>
+                  <Text style={styles.showMoreText}>Show more</Text>
+                </TouchableOpacity>
+              )}
+              {showAllTags && availableTags.length > 15 && (
+                <TouchableOpacity onPress={() => setShowAllTags(false)} style={styles.showMoreButton}>
+                  <Text style={styles.showMoreText}>Show less</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        ) : (
+          <Pressable onPress={handleSwitchToEditMode}>
+            <TextMarkdownDisplay>{editedContent}</TextMarkdownDisplay>
+          </Pressable>
+        )}
+      </ContentModal>
     </>
   );
 }
@@ -668,57 +632,7 @@ const styles = StyleSheet.create({
   inReviewTextInactive: {
     color: 'hsl(0, 60%, 45%)',
   },
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  modalContentWrapper: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: Colors.background.card,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '90%',
-    minHeight: '60%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: Spacing['3'],
-    paddingHorizontal: Spacing['4'],
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border.subtle,
-  },
-  modalHeaderButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalTitle: {
-    fontSize: Typography.lg.fontSize,
-    fontFamily: FontFamily.bold,
-    color: Colors.text.base,
-  },
-  modalInnerContent: {
-    flexGrow: 1,
-  },
-  modalBody: {
-    flex: 1,
-    padding: Spacing['4'],
-    paddingBottom: Spacing['12'],
-  },
-  modalBodyContent: {
-    padding: Spacing['4'],
-    paddingBottom: Spacing['12'],
-  },
+
   textInput: {
     fontSize: Typography.base.fontSize,
     fontFamily: FontFamily.regular,

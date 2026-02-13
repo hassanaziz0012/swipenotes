@@ -1,10 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { runOnJS, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors, FontFamily, Spacing, Typography } from '../../constants/styles';
+import { Session } from '../../db/models/session';
+import { getProjectCountsForSession } from '../../db/services/projects';
+import { getSessionsByDate } from '../../db/services/session';
 import { DayStreakData, getMonthStreakData } from '../../utils/streak';
+import { ContentModal } from '../ContentModal';
+import SessionReview, { ProjectCount } from '../SessionReview';
 
 interface StreakCalendarProps {
   userId: number;
@@ -18,15 +21,15 @@ const MONTH_NAMES = [
 ];
 
 const DAY_HEADERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-const SWIPE_THRESHOLD = 50;
 
 interface MonthGridProps {
   monthData: DayStreakData[];
   year: number;
   month: number;
+  onDayPress: (date: Date, hasStudied: boolean) => void;
 }
 
-function MonthGrid({ monthData, year, month }: MonthGridProps) {
+function MonthGrid({ monthData, year, month, onDayPress }: MonthGridProps) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -35,11 +38,6 @@ function MonthGrid({ monthData, year, month }: MonthGridProps) {
 
   return (
     <View style={styles.monthContainer}>
-      {/* Month Header */}
-      <View style={styles.header}>
-        <Text style={styles.monthTitle}>{MONTH_NAMES[month]} {year}</Text>
-      </View>
-
       {/* Day Headers */}
       <View style={styles.dayHeadersRow}>
         {DAY_HEADERS.map((day, index) => (
@@ -62,7 +60,12 @@ function MonthGrid({ monthData, year, month }: MonthGridProps) {
           const isFutureDay = day.date.getTime() > today.getTime();
 
           return (
-            <View key={index} style={styles.dayCell}>
+            <TouchableOpacity 
+              key={index} 
+              style={styles.dayCell}
+              onPress={() => onDayPress(day.date, day.hasStudied)}
+              activeOpacity={day.hasStudied ? 0.7 : 1}
+            >
               {day.hasStudied ? (
                 <View style={[styles.circle, styles.studiedCircle, isToday && styles.todayCircle]}>
                   <Ionicons name="checkmark" size={16} color={Colors.background.card} />
@@ -78,7 +81,7 @@ function MonthGrid({ monthData, year, month }: MonthGridProps) {
                   )}
                 </View>
               )}
-            </View>
+            </TouchableOpacity>
           );
         })}
       </View>
@@ -106,162 +109,124 @@ function getMonthKey(year: number, month: number): string {
 }
 
 export function StreakCalendar({ userId, initialYear, initialMonth }: StreakCalendarProps) {
-  const screenWidth = Dimensions.get('window').width - Spacing['4'] * 2 - Spacing['4'] * 2;
-  const translateX = useSharedValue(0);
-  
   const [currentYear, setCurrentYear] = useState(initialYear);
   const [currentMonth, setCurrentMonth] = useState(initialMonth);
-  const [isReady, setIsReady] = useState(false);
+  const [currentMonthData, setCurrentMonthData] = useState<DayStreakData[]>([]);
   
   // Cache to store fetched month data
   const monthCache = useRef<Map<string, DayStreakData[]>>(new Map());
-  
-  const [prevMonthData, setPrevMonthData] = useState<DayStreakData[]>([]);
-  const [currentMonthData, setCurrentMonthData] = useState<DayStreakData[]>([]);
-  const [nextMonthData, setNextMonthData] = useState<DayStreakData[]>([]);
-
-  const prev = getAdjacentMonth(currentYear, currentMonth, -1);
-  const next = getAdjacentMonth(currentYear, currentMonth, 1);
 
   // Fetch a single month's data, using cache if available
-  const fetchMonthData = useCallback(async (year: number, month: number): Promise<DayStreakData[]> => {
+  const fetchMonthData = useCallback(async (year: number, month: number) => {
     const key = getMonthKey(year, month);
     if (monthCache.current.has(key)) {
-      return monthCache.current.get(key)!;
+      setCurrentMonthData(monthCache.current.get(key)!);
+      return;
     }
-    const data = await getMonthStreakData(userId, year, month);
-    monthCache.current.set(key, data);
-    return data;
+    try {
+      const data = await getMonthStreakData(userId, year, month);
+      monthCache.current.set(key, data);
+      setCurrentMonthData(data);
+    } catch (error) {
+      console.error('Failed to fetch month data:', error);
+    }
   }, [userId]);
 
-  // Initial load - fetch all three months and wait until ready
+  // Initial load
   useEffect(() => {
-    const fetchInitialData = async () => {
-      const initPrev = getAdjacentMonth(initialYear, initialMonth, -1);
-      const initNext = getAdjacentMonth(initialYear, initialMonth, 1);
-      
-      try {
-        const [prevData, currData, nextData] = await Promise.all([
-          fetchMonthData(initPrev.year, initPrev.month),
-          fetchMonthData(initialYear, initialMonth),
-          fetchMonthData(initNext.year, initNext.month),
-        ]);
-        setPrevMonthData(prevData);
-        setCurrentMonthData(currData);
-        setNextMonthData(nextData);
-        setIsReady(true);
-      } catch (error) {
-        console.error('Failed to fetch month data:', error);
-      }
-    };
+    fetchMonthData(currentYear, currentMonth);
+  }, []); // Only run on mount to load initial data. Navigation handles updates.
 
-    fetchInitialData();
-  }, []);
+  const handlePrev = useCallback(() => {
+    const { year, month } = getAdjacentMonth(currentYear, currentMonth, -1);
+    setCurrentYear(year);
+    setCurrentMonth(month);
+    fetchMonthData(year, month);
+  }, [currentYear, currentMonth, fetchMonthData]);
 
-  // Navigate to previous month - synchronously shift data first
-  const navigateToPrevMonth = useCallback(() => {
-    const newPrev = getAdjacentMonth(prev.year, prev.month, -1);
-    
-    // Synchronously shift data: current -> next, prev -> current
-    // This must complete before we reset translateX
-    setNextMonthData(currentMonthData);
-    setCurrentMonthData(prevMonthData);
-    setCurrentYear(prev.year);
-    setCurrentMonth(prev.month);
-    
-    // Reset position immediately (data is already shifted)
-    translateX.value = 0;
-    
-    // Fetch new previous month in background (from cache or network)
-    fetchMonthData(newPrev.year, newPrev.month).then(newPrevData => {
-      setPrevMonthData(newPrevData);
-    });
-  }, [prev, currentMonthData, prevMonthData, fetchMonthData, translateX]);
+  const [selectedSessions, setSelectedSessions] = useState<{ session: Session; projectCounts: ProjectCount[] }[]>([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [loadingSessions, setLoadingSessions] = useState(false);
 
-  // Navigate to next month - synchronously shift data first
-  const navigateToNextMonth = useCallback(() => {
-    const newNext = getAdjacentMonth(next.year, next.month, 1);
-    
-    // Synchronously shift data: current -> prev, next -> current
-    setPrevMonthData(currentMonthData);
-    setCurrentMonthData(nextMonthData);
-    setCurrentYear(next.year);
-    setCurrentMonth(next.month);
-    
-    // Reset position immediately (data is already shifted)
-    translateX.value = 0;
-    
-    // Fetch new next month in background (from cache or network)
-    fetchMonthData(newNext.year, newNext.month).then(newNextData => {
-      setNextMonthData(newNextData);
-    });
-  }, [next, currentMonthData, nextMonthData, fetchMonthData, translateX]);
+  // ... existing code ...
 
-  const handleSwipeComplete = useCallback((direction: 'prev' | 'next') => {
-    if (direction === 'prev') {
-      navigateToPrevMonth();
-    } else {
-      navigateToNextMonth();
+  const handleNext = useCallback(() => {
+    const { year, month } = getAdjacentMonth(currentYear, currentMonth, 1);
+    setCurrentYear(year);
+    setCurrentMonth(month);
+    fetchMonthData(year, month);
+  }, [currentYear, currentMonth, fetchMonthData]);
+
+  const handleDayPress = useCallback(async (date: Date, hasStudied: boolean) => {
+    if (!hasStudied) return;
+
+    setLoadingSessions(true);
+    setModalVisible(true);
+    try {
+      const sessions = await getSessionsByDate(userId, date);
+      const sessionsWithCounts = await Promise.all(
+        sessions.map(async (session) => {
+          const projectCounts = await getProjectCountsForSession(session);
+          return { session, projectCounts };
+        })
+      );
+      setSelectedSessions(sessionsWithCounts);
+    } catch (error) {
+      console.error('Failed to fetch sessions:', error);
+    } finally {
+      setLoadingSessions(false);
     }
-  }, [navigateToPrevMonth, navigateToNextMonth]);
+  }, [userId]);
 
-  const swipeGesture = Gesture.Pan()
-    .onUpdate((event) => {
-      translateX.value = event.translationX;
-    })
-    .onEnd((event) => {
-      if (event.translationX > SWIPE_THRESHOLD) {
-        // Swipe right -> go to previous month
-        // Animate to final position, then swap content
-        translateX.value = screenWidth;
-        runOnJS(handleSwipeComplete)('prev');
-      } else if (event.translationX < -SWIPE_THRESHOLD) {
-        // Swipe left -> go to next month
-        translateX.value = -screenWidth;
-        runOnJS(handleSwipeComplete)('next');
-      } else {
-        // Snap back - just reset position
-        translateX.value = 0;
-      }
-    });
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }],
-  }));
-
-  // Don't render until initial data is loaded
-  if (!isReady) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.monthTitle}>{MONTH_NAMES[currentMonth]} {currentYear}</Text>
-        </View>
-      </View>
-    );
-  }
+  const handleCloseModal = () => {
+    setModalVisible(false);
+    setSelectedSessions([]);
+  };
 
   return (
     <View style={styles.container}>
-      <GestureDetector gesture={swipeGesture}>
-        <View style={styles.carouselWrapper}>
-          <Animated.View style={[styles.carousel, animatedStyle]}>
-            {/* Previous Month */}
-            <View style={[styles.monthSlide, { width: screenWidth, marginLeft: -screenWidth }]}>
-              <MonthGrid monthData={prevMonthData} year={prev.year} month={prev.month} />
-            </View>
+      {/* Header with Navigation */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={handlePrev} style={styles.arrowButton}>
+          <Ionicons name="chevron-back" size={24} color={Colors.text.base} />
+        </TouchableOpacity>
+        
+        <Text style={styles.monthTitle}>{MONTH_NAMES[currentMonth]} {currentYear}</Text>
+        
+        <TouchableOpacity onPress={handleNext} style={styles.arrowButton}>
+          <Ionicons name="chevron-forward" size={24} color={Colors.text.base} />
+        </TouchableOpacity>
+      </View>
 
-            {/* Current Month */}
-            <View style={[styles.monthSlide, { width: screenWidth }]}>
-              <MonthGrid monthData={currentMonthData} year={currentYear} month={currentMonth} />
-            </View>
 
-            {/* Next Month */}
-            <View style={[styles.monthSlide, { width: screenWidth }]}>
-              <MonthGrid monthData={nextMonthData} year={next.year} month={next.month} />
-            </View>
-          </Animated.View>
-        </View>
-      </GestureDetector>
+      <MonthGrid monthData={currentMonthData} year={currentYear} month={currentMonth} onDayPress={handleDayPress} />
+
+
+
+      <ContentModal
+        visible={modalVisible}
+        onClose={handleCloseModal}
+        title="Session Review"
+      >
+        {loadingSessions ? (
+            <ActivityIndicator size="large" color={Colors.primary.base} />
+        ) : (
+            selectedSessions.map((item, index) => (
+                <View key={item.session.id} style={styles.sessionContainer}>
+                    {index > 0 && <View style={styles.separator} />}
+                    <Text style={styles.sessionTime}>
+                        {new Date(item.session.startedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })}
+                    </Text>
+
+                    <SessionReview 
+                        session={item.session} 
+                        projectCounts={item.projectCounts}
+                        containerStyle={{ alignItems: 'center' }}
+                    />
+                </View>
+            ))
+        )}
+      </ContentModal>
     </View>
   );
 }
@@ -281,21 +246,10 @@ const styles = StyleSheet.create({
     elevation: 2,
     borderWidth: 1,
     borderColor: Colors.border.subtle,
-    overflow: 'hidden',
   },
-  carouselWrapper: {
-    overflow: 'hidden',
-  },
-  carousel: {
-    flexDirection: 'row',
-  },
-  monthSlide: {
-    flexShrink: 0,
-  },
-  monthContainer: {},
   header: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing['4'],
   },
@@ -304,6 +258,10 @@ const styles = StyleSheet.create({
     ...Typography.lg,
     color: Colors.text.base,
   },
+  arrowButton: {
+    padding: Spacing['2'],
+  },
+  monthContainer: {},
   dayHeadersRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -354,5 +312,19 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.regular,
     ...Typography.xs,
     color: Colors.text.subtle,
+  },
+  sessionContainer: {
+    marginBottom: Spacing[6],
+  },
+  separator: {
+    height: 1,
+    backgroundColor: Colors.border.subtle,
+    marginVertical: Spacing[4],
+  },
+  sessionTime: {
+    ...Typography.sm,
+    color: Colors.text.subtle,
+    marginBottom: Spacing[2],
+    fontFamily: FontFamily.regular,
   },
 });

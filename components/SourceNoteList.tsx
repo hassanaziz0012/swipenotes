@@ -1,14 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { desc } from 'drizzle-orm';
+import { Link } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import { FontFamily, Spacing, Typography } from '../constants/styles';
+import { Colors, FontFamily, Spacing, Typography } from '../constants/styles';
 import { db } from '../db/client';
 import { sourceNotes } from '../db/models/sourcenote';
 import { deleteSourceNote } from '../db/services';
-
+import { ContentModal } from './ContentModal';
 import { TextMarkdownDisplay } from './TextMarkdownDisplay';
 
 function formatRelativeDate(date: Date) {
@@ -34,18 +35,31 @@ function formatFileSize(bytes: number) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i - 1];
 }
 
-export function SourceNoteList() {
+interface SourceNoteListProps {
+  limit?: number;
+}
+
+export function SourceNoteList({ limit }: SourceNoteListProps) {
   const [selectedNote, setSelectedNote] = useState<typeof sourceNotes.$inferSelect | null>(null);
   const [notes, setNotes] = useState<typeof sourceNotes.$inferSelect[]>([]);
 
   const fetchNotes = useCallback(async () => {
     try {
-      const data = await db.select().from(sourceNotes).orderBy(desc(sourceNotes.importDate));
-      setNotes(data);
+      let query = db.select().from(sourceNotes).orderBy(desc(sourceNotes.importDate));
+      
+      if (limit) {
+        // @ts-ignore - drizzle's limit method type definition might not play nice with conditional chaining sometimes or if the query builder type changes
+        // but let's try to construct it cleanly
+         const data = await db.select().from(sourceNotes).orderBy(desc(sourceNotes.importDate)).limit(limit);
+         setNotes(data);
+      } else {
+         const data = await db.select().from(sourceNotes).orderBy(desc(sourceNotes.importDate));
+         setNotes(data);
+      }
     } catch (error) {
       console.error("Failed to fetch source notes:", error);
     }
-  }, []);
+  }, [limit]);
 
   useFocusEffect(
     useCallback(() => {
@@ -80,56 +94,49 @@ export function SourceNoteList() {
       {notes.length === 0 ? (
         <Text style={styles.emptyText}>No source notes yet</Text>
       ) : (
-        notes.map((item) => (
-          <View key={item.id} style={styles.noteWrapper}>
-            <ReanimatedSwipeable
-              renderRightActions={() => renderRightActions(item.id)}
-              containerStyle={styles.swipeableContainer}
-            >
-              <TouchableOpacity
-                style={styles.noteItem}
-                onPress={() => setSelectedNote(item)}
-                activeOpacity={0.8}
+        <>
+          {notes.map((item) => (
+            <View key={item.id} style={styles.noteWrapper}>
+              <ReanimatedSwipeable
+                renderRightActions={() => renderRightActions(item.id)}
+                containerStyle={styles.swipeableContainer}
               >
-                <View style={styles.noteIcon}>
-                  <Ionicons name="document-text-outline" size={24} color="#666" />
-                </View>
-                <View style={styles.noteInfo}>
-                  <Text style={styles.noteName} numberOfLines={1}>{item.originalFileName}</Text>
-                  <Text style={styles.noteMeta}>
-                    {formatFileSize(item.fileSize)} • {formatRelativeDate(item.importDate)}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                <TouchableOpacity
+                  style={styles.noteItem}
+                  onPress={() => setSelectedNote(item)}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.noteIcon}>
+                    <Ionicons name="document-text-outline" size={24} color="#666" />
+                  </View>
+                  <View style={styles.noteInfo}>
+                    <Text style={styles.noteName} numberOfLines={1}>{item.originalFileName}</Text>
+                    <Text style={styles.noteMeta}>
+                      {formatFileSize(item.fileSize)} • {formatRelativeDate(item.importDate)}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                </TouchableOpacity>
+              </ReanimatedSwipeable>
+            </View>
+          ))}
+          {limit && notes.length > 0 && (
+            <Link href="/all-source-notes" asChild>
+              <TouchableOpacity style={styles.seeAllLink}>
+                 <Text style={styles.seeAllText}>See all notes</Text>
               </TouchableOpacity>
-            </ReanimatedSwipeable>
-          </View>
-        ))
+            </Link>
+          )}
+        </>
       )}
 
-      <Modal
-        animationType="slide"
-        transparent={true}
+      <ContentModal
         visible={!!selectedNote}
-        onRequestClose={() => setSelectedNote(null)}
+        onClose={() => setSelectedNote(null)}
+        title={selectedNote?.originalFileName || 'Source Note'}
       >
-        <View style={styles.modalOverlay}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setSelectedNote(null)} />
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle} numberOfLines={1}>
-                {selectedNote?.originalFileName}
-              </Text>
-              <TouchableOpacity onPress={() => setSelectedNote(null)}>
-                <Ionicons name="close" size={24} color="#000" />
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={styles.modalBody}>
-              <TextMarkdownDisplay>{selectedNote?.rawContent || ''}</TextMarkdownDisplay>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+        <TextMarkdownDisplay>{selectedNote?.rawContent || ''}</TextMarkdownDisplay>
+      </ContentModal>
     </View>
   );
 }
@@ -159,6 +166,7 @@ const styles = StyleSheet.create({
     padding: Spacing['4'],
     borderRadius: 12,
     backgroundColor: '#f9f9f9',
+
   },
   deleteAction: {
     backgroundColor: '#dd2c00',
@@ -191,43 +199,14 @@ const styles = StyleSheet.create({
     marginTop: Spacing['8'],
     fontFamily: FontFamily.regular,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    height: '80%',
-    padding: Spacing['6'],
-    paddingTop: Spacing['4'],
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: -2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  seeAllLink: {
+    marginTop: Spacing['2'],
     alignItems: 'center',
-    marginBottom: Spacing['4'],
-    paddingBottom: Spacing['2'],
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    padding: Spacing['2'],
   },
-  modalTitle: {
-    ...Typography.xl,
-    fontFamily: FontFamily.bold,
-    flex: 1,
-    marginRight: Spacing['4'],
-  },
-  modalBody: {
-    flex: 1,
+  seeAllText: {
+    ...Typography.sm,
+    color: Colors.primary.base,
+    fontFamily: FontFamily.regular,
   },
 });

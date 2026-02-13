@@ -13,7 +13,7 @@ export function ReviewQueueStatCard({ count, style }: ReviewQueueStatCardProps) 
   const router = useRouter();
 
   const handleReviewPress = () => {
-    router.push('/(tabs)/study');
+    router.push('/review-queue');
   };
 
   return (

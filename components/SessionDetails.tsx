@@ -46,7 +46,7 @@ export default function SessionDetails({ session, containerStyle }: SessionDetai
                         month: 'short',
                         day: 'numeric',
                         year: 'numeric'
-                    })} • {new Date(session.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    })} • {new Date(session.startedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })}
                 </Text>
             </View>
             <View style={styles.detailRow}>

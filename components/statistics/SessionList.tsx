@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors, FontFamily, Spacing, Typography } from '../../constants/styles';
 import { Session } from '../../db/models/session';
-import { getProjectById } from '../../db/services';
+import { getProjectCountsForSession } from '../../db/services/projects';
 import SessionReview, { ProjectCount } from '../SessionReview';
 import { SessionItem } from './SessionItem';
 
@@ -22,48 +22,14 @@ export function SessionList({ sessions }: SessionListProps) {
   // Fetch project counts when a session is selected
   useEffect(() => {
     const fetchProjectCounts = async () => {
-      if (!selectedSession || !selectedSession.swipeHistory) {
+      if (!selectedSession) {
         setProjectCounts([]);
         return;
       }
 
       setLoadingProjectCounts(true);
       try {
-        const swipeHistory = selectedSession.swipeHistory as any[];
-        const cards = selectedSession.cards as any[] || [];
-        
-        // Build a map of cardId -> card
-        const cardMap = new Map<number, any>();
-        cards.forEach(card => cardMap.set(card.id, card));
-
-        // Compute project counts from swipe history
-        const projectCountsMap = new Map<number, { project: { id: number; name: string; color: string }; count: number }>();
-        const projectCache = new Map<number, { id: number; name: string; color: string }>();
-
-        for (const swipe of swipeHistory) {
-          const card = cardMap.get(swipe.cardId);
-          if (card && card.projectId) {
-            let project = projectCache.get(card.projectId);
-            if (!project) {
-              const fetchedProject = await getProjectById(card.projectId);
-              if (fetchedProject) {
-                project = { id: fetchedProject.id, name: fetchedProject.name, color: fetchedProject.color };
-                projectCache.set(card.projectId, project);
-              }
-            }
-            
-            if (project) {
-              const existing = projectCountsMap.get(project.id);
-              if (existing) {
-                existing.count += 1;
-              } else {
-                projectCountsMap.set(project.id, { project, count: 1 });
-              }
-            }
-          }
-        }
-
-        const counts = Array.from(projectCountsMap.values()).sort((a, b) => b.count - a.count);
+        const counts = await getProjectCountsForSession(selectedSession);
         setProjectCounts(counts);
       } catch (error) {
         console.error('Failed to fetch project counts:', error);
