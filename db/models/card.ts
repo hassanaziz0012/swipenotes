@@ -9,7 +9,7 @@ export const cards = sqliteTable('cards', {
     sourceNoteId: integer('source_note_id').references(() => sourceNotes.id).notNull(),
     projectId: integer('project_id').references(() => projects.id), // Optional - card can belong to one project
     content: text('content').notNull(),
-    extraInfo: text('extra_info'), // Optional
+
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
     lastSeen: integer('last_seen', { mode: 'timestamp' }), // Optional
     intervalDays: integer('interval_days').notNull(),

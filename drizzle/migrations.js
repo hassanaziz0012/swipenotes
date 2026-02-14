@@ -9,6 +9,7 @@ import m0004 from './0004_abandoned_marvel_apes.sql';
 import m0005 from './0005_past_runaways.sql';
 import m0006 from './0006_slim_the_anarchist.sql';
 import m0007 from './0007_violet_pride.sql';
+import m0008 from './0008_strange_ego.sql';
 
   export default {
     journal,
@@ -20,7 +21,8 @@ m0003,
 m0004,
 m0005,
 m0006,
-m0007
+m0007,
+m0008
     }
   }
   
