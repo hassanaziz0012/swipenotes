@@ -241,11 +241,7 @@ tags: {
   gap: 8,
 }
 
-extraInfo: {
-  marginTop: 16,
-  fontSize: 14,
-  color: text.tertiary,
-}
+
 ```
 
 ### Buttons
