@@ -1,8 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { FontFamily, Typography } from '../constants/styles';
-
-type ExtractionMethod = 'chunk_paragraph' | 'chunk_header' | 'ai' | 'full';
+import { ExtractionMethod } from '../utils/extraction';
+import { Pill } from './Pill';
 
 interface ExtractionMethodPillProps {
   method: ExtractionMethod;
@@ -19,23 +17,10 @@ export function ExtractionMethodPill({ method }: ExtractionMethodPillProps) {
   const { backgroundColor, label } = methodStyles[method] || methodStyles.full;
 
   return (
-    <View style={[styles.pill, { backgroundColor }]}>
-      <Text style={styles.text}>{label}</Text>
-    </View>
+    <Pill 
+      text={label}
+      backgroundColor={backgroundColor}
+      textColor="#fff"
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  pill: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-  },
-  text: {
-    color: '#fff',
-    fontSize: Typography.xs.fontSize,
-    fontFamily: FontFamily.bold,
-    textTransform: 'uppercase',
-  },
-});
