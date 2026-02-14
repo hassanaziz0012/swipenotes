@@ -1,6 +1,7 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { DueCardsCalendar } from '../../components/DueCardsCalendar';
 import SessionDetails from '../../components/SessionDetails';
 import { Toast } from '../../components/Toast';
@@ -8,6 +9,7 @@ import { Colors, Spacing, Typography } from '../../constants/styles';
 import { useAuth } from '../../context/AuthContext';
 import { type Session } from '../../db/models/session';
 import { createSession, getActiveSession } from '../../db/services';
+import { registerForPushNotificationsAsync } from '../../utils/notifications';
 import { retrieve_eligible_cards } from '../../utils/swipeSession';
 
 export default function StudyScreen() {
@@ -18,6 +20,10 @@ export default function StudyScreen() {
     const [loadingActiveSession, setLoadingActiveSession] = useState(true);
     const [toastVisible, setToastVisible] = useState(false);
     const [toastMessage, setToastMessage] = useState("");   
+
+    React.useEffect(() => {
+        registerForPushNotificationsAsync();
+    }, []);
 
     useFocusEffect(
         useCallback(() => {
@@ -83,7 +89,7 @@ export default function StudyScreen() {
         });
     };
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.content}>
                     <Text style={styles.title}>Ready to Study?</Text>
@@ -133,7 +139,7 @@ export default function StudyScreen() {
                 message={toastMessage} 
                 onDismiss={() => setToastVisible(false)}
             />
-        </View>
+        </SafeAreaView>
     );
 
 }

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors, FontFamily, Spacing, Typography } from '../constants/styles';
 import { getCardsDueInMonth } from '../db/services';
@@ -34,9 +34,11 @@ export function DueCardsCalendar({ userId }: DueCardsCalendarProps) {
     }
   }, [userId, currentYear, currentMonth]);
 
-  useEffect(() => {
-    fetchDueData();
-  }, [fetchDueData]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchDueData();
+    }, [fetchDueData])
+  );
 
   const goToPrevMonth = () => {
     if (currentMonth === 0) {
@@ -196,9 +198,10 @@ const styles = StyleSheet.create({
   circle: {
     width: 32,
     height: 32,
-    borderRadius: 9999,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
   },
   hasDueCircle: {
     backgroundColor: Colors.primary.light4,
