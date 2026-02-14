@@ -1,5 +1,4 @@
-import SessionReview from '@/components/SessionReview';
-import { type Card } from '@/db/models/card';
+import SwipeSessionComplete from '@/components/SwipeSessionComplete';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
@@ -11,47 +10,9 @@ import { Colors, Typography } from '../constants/styles';
 import { useAuth } from '../context/AuthContext';
 import { type Project } from '../db/models/project';
 import { type Session } from '../db/models/session';
-import { getProjectById, getSessionById, getSourceNoteById, setCardInReviewQueue, updateCard, updateSession } from '../db/services';
+import { setCardInReviewQueue, updateSession } from '../db/services';
+import { endSwipeSession, loadSessionAndCardsData } from '../utils/swipeSession';
 
-// Spaced repetition intervals (in days), capping at 90
-const INTERVALS = [1, 3, 7, 14, 30, 60, 90];
-const RANDOMNESS_FACTOR = 0.2; // ±20%
-
-/**
- * Calculate the next interval for a card based on its current intervalDays and swipe direction.
- * - Left swipe: progress to next interval with ±20% randomness
- * - Right swipe: add to review queue, don't change interval
- */
-function calculateNextInterval(card: { intervalDays: number }, direction: 'left' | 'right'): { intervalDays: number; actualInterval: number } | null {
-    if (direction === 'right') {
-        // Right swipe = review queue, no interval change
-        return null;
-    }
-
-    // Left swipe = card learned, progress to next interval
-    const currentIndex = INTERVALS.indexOf(card.intervalDays);
-    let nextIndex: number;
-
-    if (currentIndex === -1) {
-        // Card has never been seen (intervalDays = 0 or 1) or has a non-standard interval
-        // Start at the first interval (3 days)
-        nextIndex = 0;
-    } else {
-        // Progress to next interval, capping at the last one (90 days)
-        nextIndex = Math.min(currentIndex + 1, INTERVALS.length - 1);
-    }
-
-    const baseInterval = INTERVALS[nextIndex];
-
-    // Add randomness: ±20%
-    const randomOffset = baseInterval * RANDOMNESS_FACTOR;
-    const actualInterval = baseInterval + (Math.random() * randomOffset * 2 - randomOffset);
-
-    return {
-        intervalDays: INTERVALS[nextIndex], // Store the base interval for progression tracking
-        actualInterval: Math.round(actualInterval), // The actual days to add (with randomness)
-    };
-}
 
 export default function SwipeSessionScreen() {
     const { user } = useAuth();
@@ -127,49 +88,18 @@ export default function SwipeSessionScreen() {
     }, [showToast]);
 
     useEffect(() => {
-        const loadSessionAndCards = async () => {
+        const loadData = async () => {
             if (user && sessionId) {
                 try {
-                    const session = await getSessionById(Number(sessionId));
-                    if (session && session.cards) {
-                        setSession(session as Session);
-                        const sessionCards = session.cards as Card[];
-                        
-                        // Restore history and stats
-                        const history = session.swipeHistory || [];
-                        setSwipeHistory(history);
-                        setCardsSwipedCount(session.cardsSwiped || 0);
-
-                        // Filter out already swiped cards
-                        const swipedCardIds = new Set(history.map((h: any) => h.cardId));
-                        const remainingCards = sessionCards.filter(c => !swipedCardIds.has(c.id));
-                        
-                        setCards(remainingCards);
-                        setAllSessionCards(sessionCards);
-                        
-                        // Fetch projects and source notes for the cards
-                        const projectsMap: Record<number, Project> = {};
-                        const sourceNotesMap: Record<number, string> = {};
-
-                        for (const card of sessionCards) {
-                            // Fetch project if we haven't already
-                            if (card.projectId && !projectsMap[card.projectId]) {
-                                const project = await getProjectById(card.projectId);
-                                if (project) {
-                                    projectsMap[card.projectId] = project;
-                                }
-                            }
-                            // Fetch source note if we haven't already
-                            if (card.sourceNoteId && !sourceNotesMap[card.sourceNoteId]) {
-                                const sourceNote = await getSourceNoteById(card.sourceNoteId);
-                                if (sourceNote) {
-                                    sourceNotesMap[card.sourceNoteId] = sourceNote.originalFileName;
-                                }
-                            }
-                        }
-
-                        setProjects(projectsMap);
-                        setSourceNoteTitles(sourceNotesMap);
+                    const data = await loadSessionAndCardsData(sessionId, user.id);
+                    if (data) {
+                        setSession(data.session);
+                        setSwipeHistory(data.swipeHistory);
+                        setCardsSwipedCount(data.cardsSwipedCount);
+                        setCards(data.remainingCards);
+                        setAllSessionCards(data.sessionCards);
+                        setProjects(data.projectsMap);
+                        setSourceNoteTitles(data.sourceNotesMap);
                     }
                 } catch (error) {
                     console.error("Failed to load session:", error);
@@ -179,7 +109,7 @@ export default function SwipeSessionScreen() {
             }
         };
 
-        loadSessionAndCards();
+        loadData();
     }, [user, sessionId]);
 
     // Update only swipe history in DB as we go
@@ -253,74 +183,8 @@ export default function SwipeSessionScreen() {
         setIsEndingSession(true);
 
         try {
-            // 1. Build update map for all swiped cards
-            const cardUpdates = new Map<number, {
-                timesSeen: number,
-                timesLeftSwiped: number,
-                timesRightSwiped: number,
-                lastSeen: Date,
-                intervalDays: number,
-            }>();
-
-            // Initialize with current values from allSessionCards
-            allSessionCards.forEach(card => {
-                cardUpdates.set(card.id, {
-                    timesSeen: card.timesSeen || 0,
-                    timesLeftSwiped: card.timesLeftSwiped || 0,
-                    timesRightSwiped: card.timesRightSwiped || 0,
-                    lastSeen: card.lastSeen ? new Date(card.lastSeen) : new Date(),
-                    intervalDays: card.intervalDays || 0,
-                });
-            });
-
-            // Apply updates from swipe history
-            const now = new Date();
-
-            swipeHistory.forEach(swipe => {
-                const current = cardUpdates.get(swipe.cardId);
-                if (current) {
-                    current.timesSeen += 1;
-                    current.lastSeen = now;
-                    
-                    if (swipe.direction === 'left') {
-                        current.timesLeftSwiped += 1;
-
-                        // Calculate next spaced repetition interval
-                        const intervalResult = calculateNextInterval(
-                            { intervalDays: current.intervalDays },
-                            'left'
-                        );
-                        if (intervalResult) {
-                            current.intervalDays = intervalResult.intervalDays;
-                        }
-                    } else {
-                        current.timesRightSwiped += 1;
-                        // Right swipe = review queue, interval stays the same
-                    }
-
-                    cardUpdates.set(swipe.cardId, current);
-                }
-            });
-
-            // 2. Perform DB updates (only for cards that were actually swiped)
-            const swipedCardIds = new Set(swipeHistory.map(h => h.cardId));
+            await endSwipeSession(Number(sessionId), swipeHistory, allSessionCards);
             
-            const updatePromises = Array.from(swipedCardIds).map(cardId => {
-                const updates = cardUpdates.get(cardId);
-                if (updates) {
-                    return updateCard(cardId, updates);
-                }
-                return Promise.resolve();
-            });
-
-            await Promise.all(updatePromises);
-
-            // 3. Mark session as ended
-            await updateSession(Number(sessionId), {
-                isActive: false,
-                endedAt: new Date()
-            });
-
             // 4. Navigate back
             router.back();
 
@@ -339,75 +203,6 @@ export default function SwipeSessionScreen() {
         );
     }
 
-    if (cards.length === 0) {
-        // Create an updated session object for display
-        const displaySession: Session | null = session ? {
-            ...session,
-            cardsSwiped: cardsSwipedCount,
-            // We can approximate the end time for display purposes if not set
-            endedAt: session.endedAt || new Date(),
-        } : null;
-
-        // Compute project counts from swipe history
-        const projectCountsMap = new Map<number, { project: { id: number; name: string; color: string }; count: number }>();
-        
-        swipeHistory.forEach(swipe => {
-            const card = allSessionCards.find(c => c.id === swipe.cardId);
-            if (card && card.projectId && projects[card.projectId]) {
-                const project = projects[card.projectId];
-                const existing = projectCountsMap.get(project.id);
-                if (existing) {
-                    existing.count += 1;
-                } else {
-                    projectCountsMap.set(project.id, {
-                        project: { id: project.id, name: project.name, color: project.color },
-                        count: 1
-                    });
-                }
-            }
-        });
-
-        const projectCounts = Array.from(projectCountsMap.values()).sort((a, b) => b.count - a.count);
-
-        return (
-            <View style={styles.centerContainer}>
-                <View style={styles.header}>
-                     <TouchableOpacity 
-                        style={[styles.undoButton, swipeHistory.length === 0 && styles.undoButtonDisabled]} 
-                        onPress={handleUndo}
-                        disabled={swipeHistory.length === 0}
-                    >
-                        <Ionicons name="arrow-undo" size={24} color={swipeHistory.length === 0 ? Colors.text.subtle : Colors.primary.base} />
-                    </TouchableOpacity>
-                </View>
-
-                <Text style={styles.emptyText}>{limitReached ? "Daily card limit reached" : "Session Complete!"}</Text>
-                <Text style={styles.subText}>{limitReached ? "Come back tomorrow for more!" : "Great job keeping up."}</Text>
-                
-
-                <TouchableOpacity 
-                    style={[styles.button, { marginTop: 30, width: '100%', maxWidth: 400 }]} 
-                    onPress={handleEndSession}
-                    disabled={isEndingSession}
-                    >
-                     {isEndingSession ? (
-                         <ActivityIndicator color={Colors.background.base} />
-                        ) : (
-                            <Text style={styles.buttonText}>End Session</Text>
-                        )}
-                </TouchableOpacity>
-                
-                {displaySession && (
-                    <SessionReview 
-                        session={displaySession} 
-                        projectCounts={projectCounts}
-                        containerStyle={{ marginTop: 30, width: '100%', maxWidth: 400 }}
-                    />
-                )}
-            </View>
-        );
-    }
-
     return (
         <GestureHandlerRootView style={styles.container}>
             <View style={styles.header}>
@@ -420,51 +215,66 @@ export default function SwipeSessionScreen() {
                 </TouchableOpacity>
             </View>
 
-            {showToast && (
-                <RNAnimated.View style={[styles.toast, { opacity: toastOpacity }]}>
-                    <Text style={styles.toastText}>Added to review queue</Text>
-                </RNAnimated.View>
-            )}
-            <View style={styles.cardStack}>
-                {cards.map((card, index) => {
-                    // Only render the top 3 cards for performance, but need to keep others in state
-                    if (index > 2) return null;
-                    return (
-                        <SwipeCard
-                            key={card.id}
-                            card={card}
-                            index={index}
-                            onSwipeLeft={() => handleSwipeLeft(card.id)}
-                            onSwipeRight={() => handleSwipeRight(card.id)}
-                            project={card.projectId ? projects[card.projectId] : undefined}
-                            sourceNoteTitle={sourceNoteTitles[card.sourceNoteId]}
-                            activeTranslationX={index === 0 ? activeTranslationX : undefined}
-                        />
-                    );
-                }).reverse()} 
-            </View>
-             
-             {/* Hints Container */}
-             <View style={styles.hintsContainer}>
-                <Animated.View style={[styles.hint, styles.leftHint, leftHintStyle]}>
-                    <Text style={styles.hintText}>Next</Text>
-                </Animated.View>
-                <Animated.View style={[styles.hint, styles.rightHint, rightHintStyle]}>
-                    <Text style={styles.hintText}>Add to Review</Text>
-                </Animated.View>
-             </View>
+            {cards.length === 0 ? (
+                <SwipeSessionComplete
+                    session={session}
+                    cardsSwipedCount={cardsSwipedCount}
+                    swipeHistory={swipeHistory}
+                    allSessionCards={allSessionCards}
+                    projects={projects}
+                    limitReached={limitReached}
+                    isEndingSession={isEndingSession}
+                    handleEndSession={handleEndSession}
+                />
+            ) : (
+                <>
+                    {showToast && (
+                        <RNAnimated.View style={[styles.toast, { opacity: toastOpacity }]}>
+                            <Text style={styles.toastText}>Added to review queue</Text>
+                        </RNAnimated.View>
+                    )}
+                    <View style={styles.cardStack}>
+                        {cards.map((card, index) => {
+                            // Only render the top 3 cards for performance, but need to keep others in state
+                            if (index > 2) return null;
+                            return (
+                                <SwipeCard
+                                    key={card.id}
+                                    card={card}
+                                    index={index}
+                                    onSwipeLeft={() => handleSwipeLeft(card.id)}
+                                    onSwipeRight={() => handleSwipeRight(card.id)}
+                                    project={card.projectId ? projects[card.projectId] : undefined}
+                                    sourceNoteTitle={sourceNoteTitles[card.sourceNoteId]}
+                                    activeTranslationX={index === 0 ? activeTranslationX : undefined}
+                                />
+                            );
+                        }).reverse()} 
+                    </View>
+                    
+                    {/* Hints Container */}
+                    <View style={styles.hintsContainer}>
+                        <Animated.View style={[styles.hint, styles.leftHint, leftHintStyle]}>
+                            <Text style={styles.hintText}>Next</Text>
+                        </Animated.View>
+                        <Animated.View style={[styles.hint, styles.rightHint, rightHintStyle]}>
+                            <Text style={styles.hintText}>Add to Review</Text>
+                        </Animated.View>
+                    </View>
 
-            <View style={styles.footer}>
-                <Text style={styles.counter}>{cards.length} cards remaining</Text>
-                
-                <TouchableOpacity 
-                    style={styles.endSessionLink} 
-                    onPress={handleEndSession}
-                    disabled={isEndingSession}
-                >
-                    <Text style={styles.endSessionLinkText}>End Session Early</Text>
-                </TouchableOpacity>
-            </View>
+                    <View style={styles.footer}>
+                        <Text style={styles.counter}>{cards.length} cards remaining</Text>
+                        
+                        <TouchableOpacity 
+                            style={styles.endSessionLink} 
+                            onPress={handleEndSession}
+                            disabled={isEndingSession}
+                        >
+                            <Text style={styles.endSessionLinkText}>End Session Early</Text>
+                        </TouchableOpacity>
+                    </View>
+                </>
+            )}
         </GestureHandlerRootView>
     );
 }
@@ -519,20 +329,6 @@ const styles = StyleSheet.create({
         position: 'relative',
         zIndex: 1,
     },
-    emptyText: {
-        ...Typography.xl,
-        color: Colors.text.base,
-        marginBottom: 8,
-    },
-    subText: {
-        ...Typography.body,
-        color: Colors.text.subtle,
-    },
-    linkText: {
-        ...Typography.body,
-        color: Colors.primary.base,
-        textDecorationLine: 'underline',
-    },
     footer: {
         padding: 20,
         alignItems: 'center',
@@ -558,28 +354,6 @@ const styles = StyleSheet.create({
         ...Typography.body,
         color: Colors.background.base,
         fontWeight: '600',
-    },
-    button: {
-        backgroundColor: Colors.primary.base,
-        paddingVertical: 16,
-        paddingHorizontal: 32,
-        borderRadius: 12,
-        width: '100%',
-        alignItems: 'center',
-        shadowColor: "#000",
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 3.84,
-        elevation: 5,
-    },
-    buttonText: {
-        ...Typography.body,
-        color: Colors.background.base,
-        fontWeight: 'bold',
-        fontSize: 18,
     },
     hintsContainer: {
         flexDirection: 'row',
@@ -618,3 +392,4 @@ const styles = StyleSheet.create({
         textDecorationLine: 'underline',
     }
 });
+
