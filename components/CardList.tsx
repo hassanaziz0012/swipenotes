@@ -1,15 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors, FontFamily, Spacing, Typography } from '../constants/styles';
 import { db } from '../db/client';
 import { projects, type Project } from '../db/models/project';
 import { sourceNotes } from '../db/models/sourcenote';
 import { tags as tagsTable } from '../db/models/tag';
 import { setCardInReviewQueue, toggleCardsReviewQueue, updateCardContent, updateCardProject, updateCardTags } from '../db/services';
+import { EXTRACTION_METHODS, ExtractionMethod } from '../utils/extraction';
 import { CardListItem } from './CardListItem';
-
-type ExtractionMethod = 'chunk_paragraph' | 'chunk_header' | 'ai' | 'full';
+import { ExtractionMethodFilter } from './cardFilters/ExtractionMethodFilter';
+import { ProjectFilter } from './cardFilters/ProjectFilter';
+import { SourceNoteFilter } from './cardFilters/SourceNoteFilter';
+import { TagsFilter } from './cardFilters/TagsFilter';
 
 export interface CardWithSourceNote {
   id: number;
@@ -42,12 +45,7 @@ interface CardListProps {
   onCardUpdated?: () => void;
 }
 
-const EXTRACTION_METHODS: { label: string; value: ExtractionMethod }[] = [
-  { label: 'Paragraph Chunk', value: 'chunk_paragraph' },
-  { label: 'Header Chunk', value: 'chunk_header' },
-  { label: 'AI Extraction', value: 'ai' },
-  { label: 'Full Text', value: 'full' },
-];
+
 
 export function CardList({ 
   cardList: allCards, 
@@ -408,162 +406,40 @@ export function CardList({
       </ScrollView>
 
       {/* Source Note Modal */}
-      <Modal visible={showSourceModal} transparent animationType="slide">
-        <Pressable style={styles.modalOverlay} onPress={() => setShowSourceModal(false)}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Source Note</Text>
-            <FlatList
-              data={[{ id: -1, title: 'All Source Notes' }, ...availableSourceNotes]} 
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={({ item }) => (
-                <TouchableOpacity 
-                  style={[
-                    styles.modalItem, 
-                    (item.id === -1 && filters.sourceNoteId === null) || item.id === filters.sourceNoteId ? styles.modalItemSelected : {}
-                  ]}
-                  onPress={() => {
-                    setFilters(prev => ({ ...prev, sourceNoteId: item.id === -1 ? null : item.id }));
-                    setShowSourceModal(false);
-                  }}
-                >
-                  <Text style={[
-                      styles.modalItemText,
-                      (item.id === -1 && filters.sourceNoteId === null) || item.id === filters.sourceNoteId ? styles.modalItemTextSelected : {}
-                  ]}>
-                    {item.title}
-                  </Text>
-                  {((item.id === -1 && filters.sourceNoteId === null) || item.id === filters.sourceNoteId) && (
-                    <Ionicons name="checkmark" size={20} color={Colors.primary.base} />
-                  )}
-                </TouchableOpacity>
-              )}
-            />
-             <TouchableOpacity style={styles.modalCloseButton} onPress={() => setShowSourceModal(false)}>
-              <Text style={styles.modalCloseButtonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </Pressable>
-      </Modal>
+      <SourceNoteFilter
+        visible={showSourceModal}
+        onClose={() => setShowSourceModal(false)}
+        availableSourceNotes={availableSourceNotes}
+        selectedNoteId={filters.sourceNoteId}
+        onSelectNote={(id) => setFilters(prev => ({ ...prev, sourceNoteId: id }))}
+      />
 
       {/* Project Modal */}
-      <Modal visible={showProjectModal} transparent animationType="slide">
-        <Pressable style={styles.modalOverlay} onPress={() => setShowProjectModal(false)}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Project</Text>
-            <FlatList
-              data={[{ id: -1, name: 'All Projects', color: '', userId: 0, createdAt: new Date() } as Project, ...availableProjects]} 
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={({ item }) => (
-                <TouchableOpacity 
-                  style={[
-                    styles.modalItem, 
-                    (item.id === -1 && filters.projectId === null) || item.id === filters.projectId ? styles.modalItemSelected : {}
-                  ]}
-                  onPress={() => {
-                    setFilters(prev => ({ ...prev, projectId: item.id === -1 ? null : item.id }));
-                    setShowProjectModal(false);
-                  }}
-                >
-                  {item.id !== -1 && (
-                    <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: item.color, marginRight: Spacing['2'] }} />
-                  )}
-                  <Text style={[
-                      styles.modalItemText,
-                      { flex: 1 },
-                      (item.id === -1 && filters.projectId === null) || item.id === filters.projectId ? styles.modalItemTextSelected : {}
-                  ]}>
-                    {item.name}
-                  </Text>
-                  {((item.id === -1 && filters.projectId === null) || item.id === filters.projectId) && (
-                    <Ionicons name="checkmark" size={20} color={Colors.primary.base} />
-                  )}
-                </TouchableOpacity>
-              )}
-            />
-             <TouchableOpacity style={styles.modalCloseButton} onPress={() => setShowProjectModal(false)}>
-              <Text style={styles.modalCloseButtonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </Pressable>
-      </Modal>
+      <ProjectFilter
+        visible={showProjectModal}
+        onClose={() => setShowProjectModal(false)}
+        availableProjects={availableProjects}
+        selectedProjectId={filters.projectId}
+        onSelectProject={(id) => setFilters(prev => ({ ...prev, projectId: id }))}
+      />
 
       {/* Extraction Method Modal */}
-      <Modal visible={showMethodModal} transparent animationType="slide">
-        <Pressable style={styles.modalOverlay} onPress={() => setShowMethodModal(false)}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Extraction Method</Text>
-            <TouchableOpacity 
-                  style={[styles.modalItem, filters.extractionMethod === null ? styles.modalItemSelected : {}]}
-                  onPress={() => {
-                    setFilters(prev => ({ ...prev, extractionMethod: null }));
-                    setShowMethodModal(false);
-                  }}
-                >
-                  <Text style={[styles.modalItemText, filters.extractionMethod === null ? styles.modalItemTextSelected : {}]}>All Methods</Text>
-                   {filters.extractionMethod === null && <Ionicons name="checkmark" size={20} color={Colors.primary.base} />}
-            </TouchableOpacity>
-            {EXTRACTION_METHODS.map((method) => (
-               <TouchableOpacity 
-               key={method.value}
-               style={[styles.modalItem, filters.extractionMethod === method.value ? styles.modalItemSelected : {}]}
-               onPress={() => {
-                 setFilters(prev => ({ ...prev, extractionMethod: method.value }));
-                 setShowMethodModal(false);
-               }}
-             >
-               <Text style={[styles.modalItemText, filters.extractionMethod === method.value ? styles.modalItemTextSelected : {}]}>{method.label}</Text>
-               {filters.extractionMethod === method.value && <Ionicons name="checkmark" size={20} color={Colors.primary.base} />}
-             </TouchableOpacity>
-            ))}
-             <TouchableOpacity style={styles.modalCloseButton} onPress={() => setShowMethodModal(false)}>
-              <Text style={styles.modalCloseButtonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </Pressable>
-      </Modal>
+      <ExtractionMethodFilter
+        visible={showMethodModal}
+        onClose={() => setShowMethodModal(false)}
+        selectedMethod={filters.extractionMethod}
+        onSelectMethod={(method) => setFilters(prev => ({ ...prev, extractionMethod: method }))}
+      />
 
-       {/* Tags Modal */}
-       <Modal visible={showTagsModal} transparent animationType="slide">
-        <Pressable style={styles.modalOverlay} onPress={() => setShowTagsModal(false)}>
-          <View style={[styles.modalContent, { maxHeight: '80%' }]}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing['4'] }}>
-              <Text style={styles.modalTitle}>Select Tags</Text>
-              <TouchableOpacity onPress={() => setShowTagsModal(false)}>
-                <Text style={{ color: Colors.primary.base, fontFamily: FontFamily.bold }}>Done</Text>
-              </TouchableOpacity>
-            </View>
-            
-            {availableTags.length === 0 ? (
-               <Text style={{ padding: Spacing['4'], color: Colors.text.subtle, textAlign: 'center' }}>No tags available</Text>
-            ) : (
-              <FlatList
-                data={availableTags}
-                keyExtractor={(item) => item}
-                renderItem={({ item }) => {
-                  const isSelected = filters.tags.includes(item);
-                  return (
-                    <TouchableOpacity 
-                      style={[styles.modalItem, isSelected ? styles.modalItemSelected : {}]}
-                      onPress={() => toggleTag(item)}
-                    >
-                      <Text style={[styles.modalItemText, isSelected ? styles.modalItemTextSelected : {}]}>{item}</Text>
-                      <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 1, borderColor: isSelected ? Colors.primary.base : Colors.border.subtle, alignItems: 'center', justifyContent: 'center', backgroundColor: isSelected ? Colors.primary.base : 'transparent' }}>
-                        {isSelected && <Ionicons name="checkmark" size={14} color="white" />}
-                      </View>
-                    </TouchableOpacity>
-                  );
-                }}
-              />
-             )}
-             
-            <TouchableOpacity style={styles.modalCloseButton} onPress={() => {
-               setFilters(prev => ({ ...prev, tags: [] }));
-            }}>
-              <Text style={[styles.modalCloseButtonText, { color: Colors.primary.dark3 }]}>Clear Tags</Text>
-            </TouchableOpacity>
-          </View>
-        </Pressable>
-      </Modal>
+      {/* Tags Modal */}
+      <TagsFilter
+        visible={showTagsModal}
+        onClose={() => setShowTagsModal(false)}
+        availableTags={availableTags}
+        selectedTags={filters.tags}
+        onToggleTag={toggleTag}
+        onClearTags={() => setFilters(prev => ({ ...prev, tags: [] }))}
+      />
     </View>
   );
 }
@@ -621,7 +497,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary.base,
   },
   filterButtonText: {
-    fontSize: Typography.sm.fontSize,
+    ...Typography.sm,
     fontFamily: FontFamily.regular,
     color: Colors.text.base,
     marginLeft: Spacing['2'],
@@ -637,7 +513,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing['1'],
   },
   clearButtonText: {
-    fontSize: Typography.sm.fontSize,
+    ...Typography.sm,
     fontFamily: FontFamily.regular,
     color: Colors.text.subtle,
     marginLeft: Spacing['1'],
@@ -673,59 +549,5 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.regular,
     color: Colors.text.subtle,
     marginBottom: Spacing['4'],
-  },
-  
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: Colors.background.card,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    padding: Spacing['4'],
-    maxHeight: '60%',
-  },
-  modalTitle: {
-    fontSize: Typography.lg.fontSize,
-    fontFamily: FontFamily.bold,
-    color: Colors.text.base,
-    marginBottom: Spacing['4'],
-    textAlign: 'center',
-  },
-  modalItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: Spacing['3'],
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border.subtle,
-  },
-  modalItemSelected: {
-    backgroundColor: Colors.background.base,
-    paddingHorizontal: Spacing['2'],
-    borderRadius: 8,
-    borderBottomWidth: 0,
-  },
-  modalItemText: {
-    fontSize: Typography.base.fontSize,
-    fontFamily: FontFamily.regular,
-    color: Colors.text.base,
-  },
-  modalItemTextSelected: {
-    color: Colors.primary.base,
-    fontFamily: FontFamily.bold,
-  },
-  modalCloseButton: {
-    marginTop: Spacing['4'],
-    paddingVertical: Spacing['3'],
-    alignItems: 'center',
-  },
-  modalCloseButtonText: {
-     fontSize: Typography.base.fontSize,
-    fontFamily: FontFamily.bold,
-    color: Colors.text.subtle,
   },
 });

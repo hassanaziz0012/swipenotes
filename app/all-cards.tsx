@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     textAlign: 'center',
-    fontSize: Typography.xl.fontSize,
+    ...Typography.sm,
     fontFamily: FontFamily.bold,
     color: Colors.text.base,
   },
