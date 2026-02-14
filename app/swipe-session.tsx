@@ -454,8 +454,16 @@ export default function SwipeSessionScreen() {
                 </Animated.View>
              </View>
 
-             <View style={styles.footer}>
+            <View style={styles.footer}>
                 <Text style={styles.counter}>{cards.length} cards remaining</Text>
+                
+                <TouchableOpacity 
+                    style={styles.endSessionLink} 
+                    onPress={handleEndSession}
+                    disabled={isEndingSession}
+                >
+                    <Text style={styles.endSessionLinkText}>End Session Early</Text>
+                </TouchableOpacity>
             </View>
         </GestureHandlerRootView>
     );
@@ -599,5 +607,14 @@ const styles = StyleSheet.create({
         ...Typography.body,
         fontWeight: '600',
         color: Colors.text.base,
+    },
+    endSessionLink: {
+        marginTop: 16,
+        padding: 8,
+    },
+    endSessionLinkText: {
+        ...Typography.body,
+        color: Colors.primary.base,
+        textDecorationLine: 'underline',
     }
 });
