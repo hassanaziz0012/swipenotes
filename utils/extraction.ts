@@ -6,6 +6,15 @@ import { projects } from '../db/models/project';
 import { sourceNotes } from '../db/models/sourcenote';
 import { cardTags, tags as tagsTable } from '../db/models/tag';
 
+export type ExtractionMethod = 'chunk_paragraph' | 'chunk_header' | 'ai' | 'full';
+
+export const EXTRACTION_METHODS: { label: string; value: ExtractionMethod }[] = [
+  { label: 'Paragraph Chunk', value: 'chunk_paragraph' },
+  { label: 'Header Chunk', value: 'chunk_header' },
+  { label: 'AI Extraction', value: 'ai' },
+  { label: 'Full Text', value: 'full' },
+];
+
 export const processTextExtraction = async (text: string, userId: number, fileName: string = "Unknown", extractionMethod: 'manual' | 'ai' = 'manual') => {
     try {
         // If extraction method is AI, delegate to extractWithAI
