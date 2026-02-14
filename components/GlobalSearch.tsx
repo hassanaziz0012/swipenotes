@@ -1,24 +1,20 @@
+import { truncatePreview } from '@/utils/text';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Colors, FontFamily, Spacing, Typography } from '../constants/styles';
 import { useAuth } from '../context/AuthContext';
 import {
-    searchCards,
-    searchSourceNotes,
-    type CardSearchResult,
-    type SourceNoteSearchResult,
+  searchCards,
+  searchSourceNotes,
+  type CardSearchResult,
+  type SourceNoteSearchResult,
 } from '../db/services/search';
 import { ContentModal } from './ContentModal';
 import { TextMarkdownDisplay } from './TextMarkdownDisplay';
 
 const DEBOUNCE_MS = 300;
 const MIN_QUERY_LENGTH = 2;
-
-function truncatePreview(text: string, maxLength: number = 120): string {
-  if (text.length <= maxLength) return text;
-  return text.slice(0, maxLength).trimEnd() + '…';
-}
 
 export function GlobalSearch() {
   const { user } = useAuth();
