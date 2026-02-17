@@ -839,3 +839,4 @@ Track these to measure if the app achieves its goal:
    - AI extraction adoption rate
    - Tag usage patterns
    - Project organization adoption
+
